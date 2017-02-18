@@ -1,6 +1,7 @@
 # needs: spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.1.0
 
 import logging
+import os
 
 from flask import Flask, request, jsonify, render_template
 
@@ -39,8 +40,8 @@ def dataonly():
 spark \
   .readStream \
    .format("kafka") \
-    .option("kafka.bootstrap.servers", "kafkanetes-kafka:9092") \
-     .option("subscribe", "test") \
+    .option("kafka.bootstrap.servers", os.getenv("SERVERS", "localhost:9092")) \
+     .option("subscribe", os.getenv("TOPIC", "word-fountain")) \
       .load() \
   .selectExpr("CAST(value AS STRING)") \
    .groupBy("value") \
