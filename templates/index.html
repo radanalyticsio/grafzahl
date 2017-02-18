@@ -1,0 +1,67 @@
+<html>
+<body>
+<link rel="stylesheet" href="http://www.patternfly.org/assets/css/patternfly-site.min.css"></link>
+<link rel="stylesheet" href="http://www.patternfly.org/assets/css/patternfly-site.min.css"></link>
+<link rel="stylesheet" href="http://www.patternfly.org/assets/css/patternfly-site.min.css"></link>
+<script src="http://www.patternfly.org/components/jquery/dist/jquery.min.js"></script>
+<script src="http://www.patternfly.org/components/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="http://www.patternfly.org/components/patternfly/dist/js/patternfly.min.js"></script>
+<script src="http://www.patternfly.org/components/c3/c3.min.js"></script>
+<script src="http://www.patternfly.org/components/d3/d3.min.js"></script>
+<div id="bar-chart"></div>
+<div><label for="nterms">Number of words to show: </label><input id="nterms" name="nterms" type="number" value="10"/></div>
+<script>
+  var c3ChartDefaults = $().c3ChartDefaults();
+
+  var categories = [ '{{ categories|join('\',\'')|safe }}' ];
+  var columnsData = [ ['counts', {{ data|join(',') }} ] ];
+
+  var horizontalBarChartConfig = $().c3ChartDefaults().getDefaultBarConfig(categories);
+  horizontalBarChartConfig.bindto = '#bar-chart';
+  horizontalBarChartConfig.axis = {
+    rotated: true,
+    x: {
+      categories: categories,
+      type: 'category'
+    }
+  };
+  horizontalBarChartConfig.data = {
+    type: 'bar',
+    columns: columnsData,
+  };
+  var horizontalBarChart = c3.generate(horizontalBarChartConfig);
+
+  loadData = function() {
+      var nterms = $("#nterms").val();
+      var updateUrl = "data?n=" + nterms;
+    $.ajax({
+        url: updateUrl,
+        dataType: "json",
+    }).success(function(jsonData){
+      var horizontalBarChartConfig = $().c3ChartDefaults().getDefaultBarConfig(jsonData['categories']);
+      horizontalBarChartConfig.bindto = '#bar-chart';
+      horizontalBarChartConfig.axis = {
+        rotated: true,
+        x: {
+          categories: jsonData['categories'],
+          type: 'category'
+        }
+      };
+      horizontalBarChartConfig.data = {
+        type: 'bar',
+        columns: jsonData['data'],
+      };
+      horizontalBarChart = c3.generate(horizontalBarChartConfig);
+      setTimeout(function(){loadData();}, 10000);
+    });
+  };
+
+  setTimeout(function(){
+     var data = loadData();
+  }, 10000);
+
+
+
+</script>
+</body>
+</html>

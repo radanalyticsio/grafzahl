@@ -1,0 +1,9 @@
+TODO
+
+Needs -
+
+ . pip install -r requirement.txt
+ . export PYTHONPATH=.../spark.../python/lib/pyspark.zip:.../spark.../python/lib/py4j-0.10.1-src.zip
+ . export SPARK_HOME=.../spark.../
+ . kafkanetes-kafka running on port 9092
+ . spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.1.0 app.py
