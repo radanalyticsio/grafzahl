@@ -1,5 +1,6 @@
 # needs: spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.1.0
 
+import argparse
 import logging
 import os
 
@@ -7,6 +8,16 @@ from flask import Flask, request, jsonify, render_template
 
 from pyspark.sql import SparkSession
 
+
+parser = argparse.ArgumentParser(description='Count words on a Kafka topic')
+parser.add_argument('--servers', help='The bootstrap servers', default='localhost:9092')
+parser.add_argument('--topic', help='Topic to consume', default='word-fountain')
+args = parser.parse_args()
+
+servers = os.getenv('SERVERS', args.servers)
+topic = os.getenv('TOPIC', args.topic)
+
+print('servers={}, topic={}'.format(servers, topic))
 
 app = Flask(__name__)
 
@@ -40,8 +51,8 @@ def dataonly():
 spark \
   .readStream \
    .format("kafka") \
-    .option("kafka.bootstrap.servers", os.getenv("SERVERS", "localhost:9092")) \
-     .option("subscribe", os.getenv("TOPIC", "word-fountain")) \
+    .option("kafka.bootstrap.servers", servers) \
+     .option("subscribe", topic) \
       .load() \
   .selectExpr("CAST(value AS STRING)") \
    .groupBy("value") \
