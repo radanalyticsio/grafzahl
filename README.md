@@ -1,6 +1,6 @@
 # Graf Zahl
 
-Count words on an Apache Kafka topic and present them to web clients
+Count github event type instances on an Apache Kafka topic and present them to web clients
 
 ## Quick start
 
