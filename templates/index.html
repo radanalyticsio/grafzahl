@@ -6,11 +6,12 @@
 <script src="http://www.patternfly.org/components/jquery/dist/jquery.min.js"></script>
 <script src="http://www.patternfly.org/components/bootstrap/dist/js/bootstrap.min.js"></script>
 <script src="http://www.patternfly.org/components/patternfly/dist/js/patternfly.min.js"></script>
-<script src="http://www.patternfly.org/components/c3/c3.min.js"></script>
 <script src="http://www.patternfly.org/components/d3/d3.min.js"></script>
+<script src="http://www.patternfly.org/components/c3/c3.min.js"></script>
 <div id="bar-chart"></div>
 <div><label for="nterms">Number of words to show: </label><input id="nterms" name="nterms" type="number" value="10"/></div>
 <script>
+$(function() {
   var c3ChartDefaults = $().c3ChartDefaults();
 
   var categories = [ '{{ categories|join('\',\'')|safe }}' ];
@@ -60,6 +61,7 @@
      var data = loadData();
   }, 10000);
 
+});
 
 
 </script>
