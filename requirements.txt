@@ -1,1 +1,4 @@
 Flask
+psycopg2
+stomp.py
+
