@@ -73,7 +73,8 @@ def top(request):
 #                        .collect()
    cur.execute("SELECT * FROM sales ORDER BY quantity DESC LIMIT 10")
    results = cur.fetchall()
-   return (map(lambda x: x.value, results), map(lambda x: x['count'], results))
+   return([x[0] for x in results],[x[1] for x in results])
+#   return (map(lambda x: x.value, results), map(lambda x: x['count'], results))
 
 @app.route("/")
 def ahahah():
