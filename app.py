@@ -51,7 +51,7 @@ parser.add_argument('--port', help = 'The AMQP port', default='61613')
 parser.add_argument('--queue', help='Queue to consume', default='salesq')
 args = parser.parse_args()
 
-servers = os.getenv('SERVERS', args.servers)
+server = os.getenv('SERVERS', args.servers)
 port = int(os.getenv('PORT', args.port))
 queue = os.getenv('QUEUE', args.queue)
 
