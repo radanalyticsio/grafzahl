@@ -53,7 +53,7 @@ args = parser.parse_args()
 
 servers = os.getenv('SERVERS', args.servers)
 port = int(os.getenv('PORT', args.port))
-queue = os.getenv('QUEUE', args.topic)
+queue = os.getenv('QUEUE', args.queue)
 
 dest = '/queue/' + queue
 c = stomp.Connection([(server, port)])
