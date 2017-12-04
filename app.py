@@ -55,9 +55,10 @@ server = os.getenv('SERVERS', args.servers)
 port = int(os.getenv('PORT', args.port))
 queue = os.getenv('QUEUE', args.queue)
 
+sl = StompListener(conn)
 dest = '/queue/' + queue
 c = stomp.Connection([(server, port)])
-c.set_listener('', BasicListener(cur))
+c.set_listener('', sl)
 c.start()
 c.connect('daikon', 'daikon', wait=True)
 c.subscribe(destination=dest, id=1, ack='auto')
