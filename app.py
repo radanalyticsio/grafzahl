@@ -78,7 +78,7 @@ def top(request):
 
 @app.route("/")
 def ahahah():
-    logging.debug('serving counts...')
+    logging.debug('serving up counts...')
     categories, data = top(request)
     return render_template('index.html',
                            categories=categories,
