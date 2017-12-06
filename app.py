@@ -5,8 +5,6 @@ import logging
 import os
 
 from flask import Flask, request, jsonify, render_template
-#from multiprocessing import Process, Value
-
 #from pyspark.sql import SparkSession
 import stomp
 import psycopg2
@@ -43,7 +41,8 @@ def top(request):
 #   results = spark.sql("SELECT * FROM results ORDER BY count DESC LIMIT {}" \
 #                        .format(int(request.args.get('n') or 10))) \
 #                        .collect()
-   cur.execute("SELECT * FROM sales ORDER BY quantity DESC LIMIT 10")
+   cur.execute("SELECT * FROM sales ORDER BY quantity DESC LIMIT {}" \
+                .format(int(request.args.get('n') or 10)))
    results = cur.fetchall()
    return([x[0] for x in results],[x[1] for x in results])
 #   return (map(lambda x: x.value, results), map(lambda x: x['count'], results))
