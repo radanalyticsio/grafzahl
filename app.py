@@ -5,10 +5,11 @@ import logging
 import os
 
 from flask import Flask, request, jsonify, render_template
-#from pyspark.sql import SparkSession
-import stomp
+from pyspark.sql import SparkSession
+#import stomp
 import psycopg2
-from stomplistener import StompListener
+#from stomplistener import StompListener
+from amqp import AMQPUtils
 
 conn = psycopg2.connect("""
     dbname=salesdb user=daikon password=daikon host=postgresql port=5432
@@ -25,17 +26,62 @@ server = os.getenv('SERVERS', args.servers)
 port = int(os.getenv('PORT', args.port))
 queue = os.getenv('QUEUE', args.queue)
 
-sl = StompListener(conn)
-dest = '/queue/' + queue
-c = stomp.Connection([(server, port)])
-c.set_listener('', sl)
-c.start()
-c.connect('daikon', 'daikon', wait=True)
-c.subscribe(destination=dest, id=1, ack='auto')
+
+#sl = StompListener(conn)
+#dest = '/queue/' + queue
+#c = stomp.Connection([(server, port)])
+#c.set_listener('', sl)
+#c.start()
+#c.connect('daikon', 'daikon', wait=True)
+#c.subscribe(destination=dest, id=1, ack='auto')
+def handleMsg(msg):
+    itemID = msg
+    return itemID
+
+#def getquants():
+
+#    cur.execute("""
+#        SELECT * FROM sales
+#        WHERE itemid = %s;
+#        """,
+#        (itemID,))
+#    if(cur.fetchone()==None):
+#        cur.execute("""
+#        INSERT INTO sales(itemid, quantity)
+#        VALUES(%s, %s);
+#        """,
+#        (itemID, 1))
+#    else:
+#        cur.execute("""
+#        UPDATE sales
+#        SET quantit = quantity + 1
+#        WHERE itemid = %s;
+#        """,
+#        (itemID,))
+#    conn.commit()
 
 app = Flask(__name__)
 
-#spark = SparkSession.builder.appName("grafzhal").getOrCreate()
+def createStreamingContext():
+    conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
+
+    sc = SparkContext.getOrCreate(conf=conf)
+    ssc = StreamingContext(sc, 1)
+    ssc.checkpoint("/tmp/spark-streaming-amqp")
+
+    receiveStream = AMQPUtils.createStream(ssc, "broker-amq-amqp", 5672, "daikon", "daikon", "salesq")
+
+    counts = receiveStream.countByWindow(5,5)
+    counts.pprint()
+
+    return ssc
+
+
+spark = SparkSession.builder.appName("grafzhal").getOrCreate()
+ssc = StreamingContext.getOrCreate("/tmp/spark-streaming-amqp", createStreamingContext)
+
+ssc.start()
+ssc.awaitTermination()
 
 def top(request):
 #   results = spark.sql("SELECT * FROM results ORDER BY count DESC LIMIT {}" \
