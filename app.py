@@ -1,5 +1,5 @@
 # needs: spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.1.0 org.postgresql:postgresql:42.1.1
-
+from __future__ import print_function
 import argparse
 import logging
 import os
@@ -72,8 +72,8 @@ def createStreamingContext(spark):
 
     receiveStream = AMQPUtils.createStream(ssc, "broker-amq-amqp", 5672, "daikon", "daikon", "salesq")
 
-    counts = receiveStream.countByWindow(5,5)
-    counts.pprint()
+    counts = receiveStream.countByWindow(5,5).collect()
+    print(counts)
 
     return ssc
 
