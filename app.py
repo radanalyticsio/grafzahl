@@ -65,10 +65,8 @@ def handleMsg(msg):
 
 app = Flask(__name__)
 
-def createStreamingContext():
-    conf = SparkConf().set("spark.streaming.receiver.writeAheadLog.enable", "true")
-
-    sc = SparkContext.getOrCreate(conf=conf)
+def createStreamingContext(spark):
+    sc = spark.sparkContext 
     ssc = StreamingContext(sc, 1)
     ssc.checkpoint("/tmp/spark-streaming-amqp")
 
@@ -80,8 +78,8 @@ def createStreamingContext():
     return ssc
 
 
-spark = SparkSession.builder.appName("grafzhal").getOrCreate()
-ssc = StreamingContext.getOrCreate("/tmp/spark-streaming-amqp", createStreamingContext)
+spark = SparkSession.builder.appName("grafzhal").config("spark.streaming.receiver.writeAheadLog.enable", "true").getOrCreate()
+ssc = StreamingContext.getOrCreate("/tmp/spark-streaming-amqp", createStreamingContext(spark))
 
 ssc.start()
 ssc.awaitTermination()
