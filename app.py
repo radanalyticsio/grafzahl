@@ -11,10 +11,10 @@ import psycopg2
 #from stomplistener import StompListener
 from amqp import AMQPUtils
 
-conn = psycopg2.connect("""
-    dbname=salesdb user=daikon password=daikon host=postgresql port=5432
-    """)
-cur = conn.cursor()
+#conn = psycopg2.connect("""
+#    dbname=salesdb user=daikon password=daikon host=postgresql port=5432
+#    """)
+#cur = conn.cursor()
 
 parser = argparse.ArgumentParser(description='Count words on an AMQ topic')
 parser.add_argument('--servers', help='The AMQP server', default='broker-amq-stomp')
