@@ -6,6 +6,9 @@ import os
 
 from flask import Flask, request, jsonify, render_template
 from pyspark.sql import SparkSession
+from pyspark import SparkConf, SparkContext
+from pyspark.streaming import StreamingContext
+
 #import stomp
 import psycopg2
 #from stomplistener import StompListener
