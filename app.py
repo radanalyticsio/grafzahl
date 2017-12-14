@@ -66,7 +66,7 @@ def handleMsg(msg):
 app = Flask(__name__)
 
 def createStreamingContext():
-    conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
+    conf = SparkConf().set("spark.streaming.receiver.writeAheadLog.enable", "true")
 
     sc = SparkContext.getOrCreate(conf=conf)
     ssc = StreamingContext(sc, 1)
