@@ -2,9 +2,9 @@
 
 These instrutions are for testing grafzahl JBoss AM-Q connectivity on Openshift. In the interest of not changing too many components at once, Spark dependencies have been stripped out, with a Postgresql database standing in for Spark Streaming. This will be added back in a future push.
 
-1. `oc login -u \<username\> https://et0.et.eng.bos.redhat.com:8443`
+1. `oc login -u \<username\> \<openshift url\>`
 1. `oc new-project amq-grafzahl`
-2. Browse to: https://et0.et.eng.bos.redhat.com:8443/console 
+2. Browse to: \<openshift url\>:8443/console 
 3. Add to project -> Browse catalog -> Red Hat JBoss A-MQ 6.3 (Ephemeral, no SSL) with options
     * MQ_PROTOCOL=amqp,stomp
     * MQ_QUEUES=salesq
