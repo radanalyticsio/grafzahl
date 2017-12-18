@@ -8,6 +8,7 @@ from pyspark.sql import SparkSession
 from pyspark import SparkConf, SparkContext
 from pyspark.streaming import StreamingContext
 
+import json
 import psycopg2
 from amqp import AMQPUtils
 
@@ -18,7 +19,7 @@ cur = conn.cursor()
 
 parser = argparse.ArgumentParser(description='Count sales on an AMQ queue')
 parser.add_argument('--servers', help='The AMQP server', default='broker-amq-amqp')
-parser.add_argument('--port', help = 'The AMQP port', default='61613')
+parser.add_argument('--port', help = 'The AMQP port', default='5672')
 parser.add_argument('--queue', help='Queue to consume', default='salesq')
 args = parser.parse_args()
 
@@ -26,12 +27,11 @@ server = os.getenv('SERVERS', args.servers)
 port = int(os.getenv('PORT', args.port))
 queue = os.getenv('QUEUE', args.queue)
 
-def handleMsg(msg):
-    itemID = msg
-    return itemID
+def getSale(jsonMsg):
+    data = json.loads(jsonMsg)
+    return data["body"]["section"]
 
 def storeSale(msg):
-
     cur.execute("""
         SELECT * FROM sales
         WHERE itemid = %s;
@@ -54,21 +54,25 @@ def storeSale(msg):
 
 app = Flask(__name__)
 
-def createStreamingContext(spark):
-    sc = spark.sparkContext 
-    ssc = StreamingContext(sc, 1)
-    ssc.checkpoint("/tmp/spark-streaming-amqp")
+spark = SparkSession.builder \
+        .appName("equoid-data-handler") \
+        .config("spark.streaming.receiver.writeAheadLog.enable", "true") \
+        .getOrCreate()
 
-    receiveStream = AMQPUtils.createStream(ssc, "broker-amq-amqp", 5672, "daikon", "daikon", "salesq")
+sc = spark.sparkContext 
+ssc = StreamingContext(sc, 1)
+ssc.checkpoint("/tmp/spark-streaming-amqp")
 
-    counts = receiveStream.countByWindow(5,5).collect()
-    print(counts)
+receiveStream = AMQPUtils.createStream(ssc, \
+        "broker-amq-amqp", \
+        5672, \
+        "daikon", \
+        "daikon", \
+        "salesq")
 
-    return ssc
-
-
-spark = SparkSession.builder.appName("equoid-data-handler").config("spark.streaming.receiver.writeAheadLog.enable", "true").getOrCreate()
-ssc = StreamingContext.getOrCreate("/tmp/spark-streaming-amqp", createStreamingContext(spark))
+msgs = receiveStream.map(getSale)
+counts = msgs.map(lambda item: (item, 1)).reduceByKey(lambda a, b: a + b)
+counts.pprint()
 
 ssc.start()
 ssc.awaitTermination()
