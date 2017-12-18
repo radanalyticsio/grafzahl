@@ -1,5 +1,4 @@
-# needs: spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.1.0 org.postgresql:postgresql:42.1.1
-from __future__ import print_function
+# needs: spark-submit --packages io.radanalytics:spark-streaming-amqp_2.11:0.3.2 [org.postgresql:postgresql:42.1.1]
 import argparse
 import logging
 import os
@@ -9,18 +8,16 @@ from pyspark.sql import SparkSession
 from pyspark import SparkConf, SparkContext
 from pyspark.streaming import StreamingContext
 
-#import stomp
 import psycopg2
-#from stomplistener import StompListener
 from amqp import AMQPUtils
 
-#conn = psycopg2.connect("""
-#    dbname=salesdb user=daikon password=daikon host=postgresql port=5432
-#    """)
-#cur = conn.cursor()
+conn = psycopg2.connect("""
+    dbname=salesdb user=daikon password=daikon host=postgresql port=5432
+    """)
+cur = conn.cursor()
 
-parser = argparse.ArgumentParser(description='Count words on an AMQ topic')
-parser.add_argument('--servers', help='The AMQP server', default='broker-amq-stomp')
+parser = argparse.ArgumentParser(description='Count sales on an AMQ queue')
+parser.add_argument('--servers', help='The AMQP server', default='broker-amq-amqp')
 parser.add_argument('--port', help = 'The AMQP port', default='61613')
 parser.add_argument('--queue', help='Queue to consume', default='salesq')
 args = parser.parse_args()
@@ -29,39 +26,31 @@ server = os.getenv('SERVERS', args.servers)
 port = int(os.getenv('PORT', args.port))
 queue = os.getenv('QUEUE', args.queue)
 
-
-#sl = StompListener(conn)
-#dest = '/queue/' + queue
-#c = stomp.Connection([(server, port)])
-#c.set_listener('', sl)
-#c.start()
-#c.connect('daikon', 'daikon', wait=True)
-#c.subscribe(destination=dest, id=1, ack='auto')
 def handleMsg(msg):
     itemID = msg
     return itemID
 
-#def getquants():
+def storeSale(msg):
 
-#    cur.execute("""
-#        SELECT * FROM sales
-#        WHERE itemid = %s;
-#        """,
-#        (itemID,))
-#    if(cur.fetchone()==None):
-#        cur.execute("""
-#        INSERT INTO sales(itemid, quantity)
-#        VALUES(%s, %s);
-#        """,
-#        (itemID, 1))
-#    else:
-#        cur.execute("""
-#        UPDATE sales
-#        SET quantit = quantity + 1
-#        WHERE itemid = %s;
-#        """,
-#        (itemID,))
-#    conn.commit()
+    cur.execute("""
+        SELECT * FROM sales
+        WHERE itemid = %s;
+        """,
+        (itemID,))
+    if(cur.fetchone()==None):
+        cur.execute("""
+        INSERT INTO sales(itemid, quantity)
+        VALUES(%s, %s);
+        """,
+        (itemID, 1))
+    else:
+        cur.execute("""
+        UPDATE sales
+        SET quantit = quantity + 1
+        WHERE itemid = %s;
+        """,
+        (itemID,))
+    conn.commit()
 
 app = Flask(__name__)
 
@@ -78,7 +67,7 @@ def createStreamingContext(spark):
     return ssc
 
 
-spark = SparkSession.builder.appName("grafzhal").config("spark.streaming.receiver.writeAheadLog.enable", "true").getOrCreate()
+spark = SparkSession.builder.appName("equoid-data-handler").config("spark.streaming.receiver.writeAheadLog.enable", "true").getOrCreate()
 ssc = StreamingContext.getOrCreate("/tmp/spark-streaming-amqp", createStreamingContext(spark))
 
 ssc.start()
