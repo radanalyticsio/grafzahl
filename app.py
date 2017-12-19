@@ -97,10 +97,6 @@ ssc.start()
 ssc.awaitTerminationOrTimeout(batchIntervalSeconds * 2)
 
 def top(request):
-    conn = psycopg2.connect("""
-        dbname=salesdb user=daikon password=daikon host=postgresql port=5432
-        """)
-    cur = conn.cursor()    
     cur.execute("SELECT * FROM sales ORDER BY quantity DESC LIMIT {}" \
         .format(int(request.args.get('n') or 10)))
     results = cur.fetchall()
