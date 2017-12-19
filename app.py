@@ -1,6 +1,6 @@
 # needs: spark-submit --packages io.radanalytics:spark-streaming-amqp_2.11:0.3.2 [org.postgresql:postgresql:42.1.1]
-from psycopg2cffi import compat
-compat.register()
+#from psycopg2cffi import compat
+#compat.register()
 import argparse
 import logging
 import os
@@ -91,9 +91,9 @@ def makeStream():
 
     return ssc
 
-ssc = StreamingContext.getActiveOrCreate("/tmp/spark-streaming-amqp",makeStream)
-ssc.start()
-ssc.awaitTerminationOrTimeout(batchIntervalSeconds * 2)
+#ssc = StreamingContext.getActiveOrCreate("/tmp/spark-streaming-amqp",makeStream)
+#ssc.start()
+#ssc.awaitTerminationOrTimeout(batchIntervalSeconds * 2)
 
 def top(request):
     curs.execute("SELECT * FROM sales ORDER BY quantity DESC LIMIT {}" \
