@@ -31,7 +31,7 @@ def getSale(jsonMsg):
     data = json.loads(jsonMsg)
     return data["body"]["section"]
 
-def storeSale(msg)
+def storeSale(msg):
     _conn = psycopg2.connect("""
         dbname=salesdb user=daikon password=daikon host=postgresql port=5432
         """)
