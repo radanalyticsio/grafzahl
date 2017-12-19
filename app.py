@@ -1,4 +1,6 @@
 # needs: spark-submit --packages io.radanalytics:spark-streaming-amqp_2.11:0.3.2 [org.postgresql:postgresql:42.1.1]
+from psycopg2cffi import compat
+compat.register()
 import argparse
 import logging
 import os
