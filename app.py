@@ -32,6 +32,11 @@ def getSale(jsonMsg):
     return data["body"]["section"]
 
 def storeSale(msg):
+    conn = psycopg2.connect("""
+        dbname=salesdb user=daikon password=daikon host=postgresql port=5432
+        """)
+    cur = conn.cursor()        
+
     cur.execute("""
         SELECT * FROM sales
         WHERE itemid = %s;
@@ -46,50 +51,64 @@ def storeSale(msg):
     else:
         cur.execute("""
         UPDATE sales
-        SET quantit = quantity + 1
+        SET quantity = quantity + 1
         WHERE itemid = %s;
         """,
         (itemID,))
     conn.commit()
+    cur.close()
+    conn.close()
+
+def sendSale(rdd):    
+    rdd.foreach(lambda record: storeSale(record))
 
 app = Flask(__name__)
+
+batchIntervalSeconds = 5
 
 spark = SparkSession.builder \
         .appName("equoid-data-handler") \
         .config("spark.streaming.receiver.writeAheadLog.enable", "true") \
         .getOrCreate()
 
-sc = spark.sparkContext 
-ssc = StreamingContext(sc, 1)
-ssc.checkpoint("/tmp/spark-streaming-amqp")
+def makeStream():
+    sc = spark.sparkContext 
+    ssc = StreamingContext(sc, batchIntervalSeconds)
+    ssc.checkpoint("/tmp/spark-streaming-amqp")
 
-receiveStream = AMQPUtils.createStream(ssc, \
+    receiveStream = AMQPUtils.createStream(ssc, \
         "broker-amq-amqp", \
         5672, \
         "daikon", \
         "daikon", \
         "salesq")
 
-msgs = receiveStream.map(getSale)
-counts = msgs.map(lambda item: (item, 1)).reduceByKey(lambda a, b: a + b)
-counts.pprint()
+    sales = receiveStream \
+            .map(getSale) \
+            .foreachRDD(sendSale)
 
+    return ssc
+
+#counts = msgs.map(lambda item: (item, 1)).reduceByKey(lambda a, b: a + b)
+#counts.pprint()
+
+ssc = StreamingContext.getActiveOrCreate("/tmp/spark-streaming-amqp",makeStream)
 ssc.start()
-ssc.awaitTermination()
+ssc.awaitTerminationOrTimeout(batchIntervalSeconds * 2)
 
 def top(request):
-#   results = spark.sql("SELECT * FROM results ORDER BY count DESC LIMIT {}" \
-#                        .format(int(request.args.get('n') or 10))) \
-#                        .collect()
-   cur.execute("SELECT * FROM sales ORDER BY quantity DESC LIMIT {}" \
-                .format(int(request.args.get('n') or 10)))
-   results = cur.fetchall()
-   return([x[0] for x in results],[x[1] for x in results])
-#   return (map(lambda x: x.value, results), map(lambda x: x['count'], results))
+    conn = psycopg2.connect("""
+        dbname=salesdb user=daikon password=daikon host=postgresql port=5432
+        """)
+    cur = conn.cursor()    
+    cur.execute("SELECT * FROM sales ORDER BY quantity DESC LIMIT {}" \
+        .format(int(request.args.get('n') or 10)))
+    results = cur.fetchall()
+    return([x[0] for x in results],[x[1] for x in results])
 
 @app.route("/")
 def ahahah():
-    logging.debug('serving up counts...')
+    logging.debug('serving up sales...')
     categories, data = top(request)
     return render_template('index.html',
                            categories=categories,
@@ -97,7 +116,7 @@ def ahahah():
 
 @app.route("/data")
 def dataonly():
-    logging.debug('serving data...')
+    logging.debug('serving sales...')
     categories, data = top(request)
     data.insert(0, "counts")
     return jsonify({"categories": categories, "data": [data]})
@@ -105,20 +124,4 @@ def dataonly():
 
 #logging.basicConfig(level=logging.DEBUG)
 
-"""
-spark \
-  .readStream \
-   .format("kafka") \
-    .option("kafka.bootstrap.servers", servers) \
-     .option("subscribe", topic) \
-      .load() \
-  .selectExpr("CAST(value AS STRING)") \
-   .groupBy("value") \
-    .count() \
-  .writeStream \
-   .outputMode("complete") \
-    .format("memory") \
-     .queryName("results") \
-  .start()
-"""
 app.run(host='0.0.0.0', port=8080)
