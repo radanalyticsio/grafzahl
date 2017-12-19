@@ -12,10 +12,10 @@ import json
 import psycopg2
 from amqp import AMQPUtils
 
-#conn = psycopg2.connect("""
-#    dbname=salesdb user=daikon password=daikon host=postgresql port=5432
-#    """)
-#cur = conn.cursor()
+conn = psycopg2.connect("""
+    dbname=salesdb user=daikon password=daikon host=postgresql port=5432
+    """)
+curs = conn.cursor()
 
 parser = argparse.ArgumentParser(description='Count sales on an AMQ queue')
 parser.add_argument('--servers', help='The AMQP server', default='broker-amq-amqp')
@@ -32,10 +32,11 @@ def getSale(jsonMsg):
     return data["body"]["section"]
 
 def storeSale(msg):
-    conn = psycopg2.connect("""
+    import psycopg2
+    _conn = psycopg2.connect("""
         dbname=salesdb user=daikon password=daikon host=postgresql port=5432
         """)
-    cur = conn.cursor()        
+    cur = _conn.cursor()        
 
     cur.execute("""
         SELECT * FROM sales
@@ -97,13 +98,13 @@ ssc.start()
 ssc.awaitTerminationOrTimeout(batchIntervalSeconds * 2)
 
 def top(request):
-    conn = psycopg2.connect("""
-        dbname=salesdb user=daikon password=daikon host=postgresql port=5432
-        """)
-    cur = conn.cursor()    
-    cur.execute("SELECT * FROM sales ORDER BY quantity DESC LIMIT {}" \
+#    conn = psycopg2.connect("""
+#        dbname=salesdb user=daikon password=daikon host=postgresql port=5432
+#        """)
+#    cur = conn.cursor()    
+    curs.execute("SELECT * FROM sales ORDER BY quantity DESC LIMIT {}" \
         .format(int(request.args.get('n') or 10)))
-    results = cur.fetchall()
+    results = curs.fetchall()
     return([x[0] for x in results],[x[1] for x in results])
 
 @app.route("/")
