@@ -30,24 +30,36 @@ object dataHandler {
   private val appName: String = getClass().getSimpleName()
 
   private val batchIntervalSeconds: Int = 1
-//  private val batchDuration: Duration = Seconds(batchIntervalSeconds)
   private val checkpointDir: String = "/tmp/equoid-data-handler"
 
-  private val amqpHost: String = "172.30.109.176"
-  private val amqpPort: Int = 5672
-  private val address: String = "salesq"
-  private val username: Option[String] = Option("daikon")
-  private val password: Option[String] = Option("daikon")
+  private var amqpHost: String = "172.17.0.6"
+  private var amqpPort: Int = 5672
+  private var address: String = "salesq"
+  private var username: Option[String] = Option("daikon")
+  private var password: Option[String] = Option("daikon")
   private val jsonMessageConverter: AMQPJsonFunction = new AMQPJsonFunction()
-  private val infinispanHost: String = "172.30.109.176"
-  private val infinispanPort: Int = 11333
+  private var infinispanHost: String = "172.30.149.192"
+  private var infinispanPort: Int = 11333
 
   def main(args: Array[String]): Unit = {
+
+    if (args.length < 7) {
+      System.err.println("Usage: dataHandler <AMQHostname> <AMQPort> <AMQUsername> <AMQPassword> <AMQQueue> <JDGHostname> <JDGPort>")
+      System.exit(1)
+    }
+
+    amqpHost = args(0)
+    amqpPort = args(1).toInt
+    username = Option(args(2))
+    password = Option(args(3))
+    address = args(4)
+    infinispanHost = args(5)
+    infinispanPort = args(6).toInt
 
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContextJson)
     
     ssc.start()
-    ssc.awaitTerminationOrTimeout(batchIntervalSeconds * 5 * 1000)
+    ssc.awaitTerminationOrTimeout(batchIntervalSeconds * 1000 * 1000)
     ssc.stop()
   }
 
