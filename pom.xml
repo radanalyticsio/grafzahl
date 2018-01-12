@@ -21,7 +21,7 @@
 	<dependency>
 		<groupId>io.radanalytics</groupId>
 		<artifactId>spark-streaming-amqp_2.11</artifactId>
-		<version>0.3.0</version>
+		<version>0.3.1</version>
 	</dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>

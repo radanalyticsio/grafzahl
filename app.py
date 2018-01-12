@@ -11,13 +11,14 @@ from pyspark import SparkConf, SparkContext
 from pyspark.streaming import StreamingContext
 
 import json
-import psycopg2
+#import psycopg2
+import infinispan
 from amqp import AMQPUtils
 
-conn = psycopg2.connect("""
-    dbname=salesdb user=daikon password=daikon host=postgresql port=5432
-    """)
-curs = conn.cursor()
+#conn = psycopg2.connect("""
+#    dbname=salesdb user=daikon password=daikon host=postgresql port=5432
+#    """)
+#curs = conn.cursor()
 
 parser = argparse.ArgumentParser(description='Count sales on an AMQ queue')
 parser.add_argument('--servers', help='The AMQP server', default='broker-amq-amqp')
@@ -33,7 +34,16 @@ def getSale(jsonMsg):
     data = json.loads(jsonMsg)
     return data["body"]["section"]
 
-def storeSale(msg):
+def storeSale(itemID):
+    hostname = 'datagrid-hotrod'
+    port = 11333
+    remote_cache = RemoteCache(host=hostname, port=port)
+    [miss, val] = remote_cache.put_if_absent(itemID, '1', ret_prev=True)
+    
+    if miss == False:
+        remote_cache.put(itemID, str(int(val)+1))
+
+def storeSalePostgres(msg):
     _conn = psycopg2.connect("""
         dbname=salesdb user=daikon password=daikon host=postgresql port=5432
         """)
