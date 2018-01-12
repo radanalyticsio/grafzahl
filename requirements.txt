@@ -1,5 +1,0 @@
-Flask
-psycopg2
-psycopg2cffi
-infinispan
-
