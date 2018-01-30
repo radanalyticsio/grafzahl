@@ -34,13 +34,13 @@ class TopK[V](
   def ++(that: TopK[V]): TopK[V] = {
     val ucms = that.cms.mergeInPlace(this.cms)
     val vu = this.topk.keys.toSet ++ that.topk.keys.toSet
-    val (utopk, ufmin) = vu.foldLeft((immutable.Map.empty[V, Int], 0)) { case (v, (tk, fm)) =>
+    val (utopk, ufmin) = vu.foldLeft((immutable.Map.empty[V, Int], 0)) { case (v: V, (tk: immutable.Map[V, Int], fm: Int)) =>
       val vf = ucms.estimateCount(v).toInt
       if (tk.size < k) {
-        (tk + (v -> vf), tk.min(vf, fm))
+        (tk + (v -> vf), math.min(vf, fm))
       } else if (vf <= fm) (tk, fm) else {
         val del = tk.minBy { case (_, f) => f }
-        ((tk - del._1) + (v, vf), tk.values.min)
+        ((tk - del._1) + (v -> vf), tk.values.min)
       }
     }
     new TopK[V](k, ucms, utopk, ufmin)
