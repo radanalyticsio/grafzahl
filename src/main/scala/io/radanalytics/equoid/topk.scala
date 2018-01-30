@@ -12,7 +12,7 @@ import scala.collection.immutable
 class TopK[V](
   val k: Int,
   val cms: CountMinSketch,
-  val topk: scala.collection.immutable.Map[V, Int],
+  val topk: immutable.Map[V, Int],
   val fmin: Int) {
   
   // update the TopK sketch w/ a new element 'v'
@@ -34,12 +34,12 @@ class TopK[V](
   def ++(that: TopK[V]): TopK[V] = {
     val ucms = that.cms.mergeInPlace(this.cms)
     val vu = this.topk.keys.toSet ++ that.topk.keys.toSet
-    val (utopk, ufmin) = vu.foldLeft((Map.empty[V, Int], 0)) { case (v, (tk, fm)) =>
+    val (utopk, ufmin) = vu.foldLeft((immutable.Map.empty[V, Int], 0)) { case (v, (tk, fm)) =>
       val vf = ucms.estimateCount(v).toInt
       if (tk.size < k) {
         (tk + (v -> vf), tk.min(vf, fm))
       } else if (vf <= fm) (tk, fm) else {
-        val del = map.minBy { case (_, f) => f }
+        val del = tk.minBy { case (_, f) => f }
         ((tk - del._1) + (v, vf), tk.values.min)
       }
     }
