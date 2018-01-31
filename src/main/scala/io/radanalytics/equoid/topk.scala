@@ -40,7 +40,8 @@ class TopK[V](
         (tk + (v -> vf), math.min(vf, fm))
       } else if (vf <= fm) (tk, fm) else {
         val del = tk.minBy { case (_, f) => f }
-        ((tk - del._1) + (v -> vf), tk.values.min)
+        val mintk = (tk - del._1) + (v -> vf)
+        (mintk, mintk.values.min)
       }
     }
     new TopK[V](k, ucms, utopk, ufmin)
