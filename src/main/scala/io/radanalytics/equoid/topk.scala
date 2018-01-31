@@ -33,8 +33,8 @@ class TopK[V](
   // combine two TopK sketches, monoidally
   def ++(that: TopK[V]): TopK[V] = {
     val ucms = that.cms.mergeInPlace(this.cms)
-    val vu = this.topk.keys.toSet ++ that.topk.keys.toSet
-    val (utopk, ufmin) = vu.foldLeft((immutable.Map.empty[V, Int], 0)) { case (v: V, (tk: immutable.Map[V, Int], fm: Int)) =>
+    val vu: Set[V] = this.topk.keys.toSet ++ that.topk.keys.toSet
+    val (utopk, ufmin) = vu.foldLeft((immutable.Map.empty[V, Int], 0)) { case ((tk, fm), v) =>
       val vf = ucms.estimateCount(v).toInt
       if (tk.size < k) {
         (tk + (v -> vf), math.min(vf, fm))
