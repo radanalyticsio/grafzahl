@@ -32,7 +32,9 @@ class TopK[V](
   
   // combine two TopK sketches, monoidally
   def ++(that: TopK[V]): TopK[V] = {
-    val ucms = that.cms.mergeInPlace(this.cms)
+    val ecms: CountMinSketch = CountMinSketch.create(k, k*5, 13)
+    val thatcms = ecms.mergeInPlace(that.cms) 
+    val ucms = thatcms.mergeInPlace(this.cms)
     val vu: Set[V] = this.topk.keys.toSet ++ that.topk.keys.toSet
     val (utopk, ufmin) = vu.foldLeft((immutable.Map.empty[V, Int], 0)) { case ((tk, fm), v) =>
       val vf = ucms.estimateCount(v).toInt
