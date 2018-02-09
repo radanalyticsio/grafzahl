@@ -61,7 +61,7 @@ object dataHandler {
     address = args(4)
     infinispanHost = args(5)
     infinispanPort = args(6).toInt
-    master = "sparky"
+    master = "spark://sparky:7077"
 
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContextJson)
     
