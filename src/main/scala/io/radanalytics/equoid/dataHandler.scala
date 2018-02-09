@@ -15,6 +15,11 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.amqp.AMQPUtils
 import org.apache.spark.streaming.{Duration, Seconds, StreamingContext}
 
+import org.apache.spark.util.sketch.CountMinSketch
+import io.radanalytics.equoid._
+import org.apache.spark.sql.SparkSession
+
+import org.apache.spark.util.sketch
 import scala.util.Random
 
 import org.infinispan._
@@ -23,28 +28,29 @@ import org.infinispan.client.hotrod.RemoteCacheManager
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder
 import org.infinispan.client.hotrod.impl.ConfigurationProperties
 
+import scala.collection.immutable._
 
 object dataHandler {
 
-  private val master: String = "local[2]"
+  private var master: String = "local[2]"
   private val appName: String = getClass().getSimpleName()
 
   private val batchIntervalSeconds: Int = 1
   private val checkpointDir: String = "/tmp/equoid-data-handler"
 
-  private var amqpHost: String = "172.17.0.6"
+  private var amqpHost: String = "broker-amq-amqp"
   private var amqpPort: Int = 5672
   private var address: String = "salesq"
   private var username: Option[String] = Option("daikon")
   private var password: Option[String] = Option("daikon")
   private val jsonMessageConverter: AMQPJsonFunction = new AMQPJsonFunction()
-  private var infinispanHost: String = "172.30.149.192"
+  private var infinispanHost: String = "hotrod-datagrid"
   private var infinispanPort: Int = 11333
 
   def main(args: Array[String]): Unit = {
 
-    if (args.length < 7) {
-      System.err.println("Usage: dataHandler <AMQHostname> <AMQPort> <AMQUsername> <AMQPassword> <AMQQueue> <JDGHostname> <JDGPort>")
+    if (args.length < 8) {
+      System.err.println("Usage: dataHandler <AMQHostname> <AMQPort> <AMQUsername> <AMQPassword> <AMQQueue> <JDGHostname> <JDGPort> <SparkMaster>")
       System.exit(1)
     }
 
@@ -55,6 +61,7 @@ object dataHandler {
     address = args(4)
     infinispanHost = args(5)
     infinispanPort = args(6).toInt
+    master = args(7)
 
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContextJson)
     
@@ -88,7 +95,6 @@ object dataHandler {
     cache.put(itemID, ret)
     cacheManager.stop()
   }
-  
  
   def messageConverter(message: Message): Option[String] = {
     message.getBody match {
@@ -100,20 +106,27 @@ object dataHandler {
     }
   }
 
+  def addSale(itemID: String): Unit = {
+    storeSale(itemID)
+  }
+
   def createStreamingContextJson(): StreamingContext = {
+    val ttk = TopK
     val conf = new SparkConf().setMaster(master).setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     val ssc = new StreamingContext(conf, Seconds(batchIntervalSeconds))
     ssc.checkpoint(checkpointDir)
-
     val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, jsonMessageConverter, StorageLevel.MEMORY_ONLY)
     
     val saleStream = receiveStream.map(getSale)
+    
     saleStream.foreachRDD{ rdd =>
-      rdd.foreach { record => 
-        storeSale(record)
+      rdd.foreach { record =>
+        addSale(record)
+        ttk+record
       }
     }
+    saleStream.print()
     ssc
   }
 }
