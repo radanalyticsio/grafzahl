@@ -116,7 +116,7 @@ object dataHandler {
     //val conf = new SparkConf().setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     val ssc = new StreamingContext(conf, Seconds(batchIntervalSeconds))
-//    ssc.checkpoint(checkpointDir)
+    ssc.checkpoint(checkpointDir)
     val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, jsonMessageConverter, StorageLevel.MEMORY_ONLY)
     
     val saleStream = receiveStream.map(getSale)
