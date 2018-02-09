@@ -124,7 +124,7 @@ object dataHandler {
     saleStream.foreachRDD{ rdd =>
       rdd.foreach { record =>
         addSale(record)
-        ttk+record
+//        ttk+record
       }
     }
     saleStream.print()
