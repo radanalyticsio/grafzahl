@@ -49,8 +49,8 @@ object dataHandler {
 
   def main(args: Array[String]): Unit = {
 
-    if (args.length < 8) {
-      System.err.println("Usage: dataHandler <AMQHostname> <AMQPort> <AMQUsername> <AMQPassword> <AMQQueue> <JDGHostname> <JDGPort> <SparkMaster>")
+    if (args.length < 7) {
+      System.err.println("Usage: dataHandler <AMQHostname> <AMQPort> <AMQUsername> <AMQPassword> <AMQQueue> <JDGHostname> <JDGPort>")
       System.exit(1)
     }
 
@@ -61,7 +61,7 @@ object dataHandler {
     address = args(4)
     infinispanHost = args(5)
     infinispanPort = args(6).toInt
-    master = args(7)
+//    master = args(7)
 
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContextJson)
     
@@ -112,7 +112,8 @@ object dataHandler {
 
   def createStreamingContextJson(): StreamingContext = {
     val ttk = TopK
-    val conf = new SparkConf().setMaster(master).setAppName(appName)
+    //val conf = new SparkConf().setMaster(master).setAppName(appName)
+    val conf = new SparkConf().setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     val ssc = new StreamingContext(conf, Seconds(batchIntervalSeconds))
     ssc.checkpoint(checkpointDir)
