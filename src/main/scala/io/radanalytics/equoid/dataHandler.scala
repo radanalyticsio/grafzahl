@@ -44,7 +44,7 @@ object dataHandler {
   private var username: Option[String] = Option("daikon")
   private var password: Option[String] = Option("daikon")
   private val jsonMessageConverter: AMQPJsonFunction = new AMQPJsonFunction()
-  private var infinispanHost: String = "hotrod-datagrid"
+  private var infinispanHost: String = "datagrid-hotrod"
   private var infinispanPort: Int = 11333
 
   def main(args: Array[String]): Unit = {
