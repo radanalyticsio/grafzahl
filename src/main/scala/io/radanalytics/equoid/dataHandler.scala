@@ -84,16 +84,17 @@ object dataHandler {
     val cacheManager = new RemoteCacheManager(builder.build())
 
     var cache: RemoteCache[String, String] = cacheManager.getCache()
+    var itemName = itemID
 
-    itemID = itemID.replaceAll("\"", "")
-    var ret = cache.get(itemID)
+    itemName = itemName.replaceAll("\"", "")
+    var ret = cache.get(itemName)
     if (ret!=null) {
       ret = (ret.toInt+1).toString
     }
     else {
       ret = "1"
     }
-    cache.put(itemID, ret)
+    cache.put(itemName, ret)
     cacheManager.stop()
   }
  
