@@ -85,6 +85,7 @@ object dataHandler {
 
     var cache: RemoteCache[String, String] = cacheManager.getCache()
 
+    itemID = itemID.replaceAll("\"", "")
     var ret = cache.get(itemID)
     if (ret!=null) {
       ret = (ret.toInt+1).toString
