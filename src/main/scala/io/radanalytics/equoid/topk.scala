@@ -9,11 +9,11 @@ import org.apache.spark.util.sketch.CountMinSketch
 
 import scala.collection.immutable
 
-class TopK[V](
+class TopK[V] ( 
   val k: Int,
   val cms: CountMinSketch,
   val topk: immutable.Map[V, Int],
-  val fmin: Int) {
+  val fmin: Int)  extends Serializable {
   
   // update the TopK sketch w/ a new element 'v'
   def +(v: V): TopK[V] = {
