@@ -7,7 +7,8 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import io.radanalytics.streaming.amqp.AMQPJsonFunction
 import io.vertx.core.{AsyncResult, Handler, Vertx}
 import io.vertx.proton._
-import org.apache.log4j.{Level, Logger}
+import org.apache.log4j.{Level, LogManager, PropertyConfigurator, Logger}
+
 import org.apache.qpid.proton.amqp.messaging.{AmqpValue, Data}
 import org.apache.qpid.proton.message.Message
 import org.apache.spark.SparkConf
@@ -77,7 +78,9 @@ object dataHandler {
 
     val node: JsonNode = mapper.readTree(jsonMsg)
     ret = node.get("body").get("section").toString
-    println("***JSCHLESS***Ret from getSale = " + ret)
+    val log = LogManager.getRootLogger
+    
+    log.warn("***JSCHLESS***Ret from getSale = " + ret)
     ret 
   }
 
@@ -89,7 +92,8 @@ object dataHandler {
     var cache: RemoteCache[String, String] = cacheManager.getCache()
     var itemName = itemID
 
-    println("***JSCHLESS***itemID before call to cache.get = " + itemName)
+    val log = LogManager.getRootLogger
+    log.warn("***JSCHLESS***itemID before call to cache.get = " + itemName)
     var ret = cache.get(itemName)
     if (ret!=null) {
       ret = (ret.toInt+1).toString
@@ -97,7 +101,7 @@ object dataHandler {
     else {
       ret = "1"
     }
-    println("***JSCHLESS***itemID before call to cache.put = " + itemName + " and ret = " + ret)
+    log.warn("***JSCHLESS***itemID before call to cache.put = " + itemName + " and ret = " + ret)
     cache.put(itemName, ret)
 
     cacheManager.stop()
