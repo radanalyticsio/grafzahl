@@ -38,7 +38,7 @@ object dataHandler {
   private val batchIntervalSeconds: Int = 1
   private val checkpointDir: String = "/tmp/equoid-data-handler"
 
-  private var amqpHost: String = "broker-amq-amqp"
+  private var amqpHost: String = "localhost"
   private var amqpPort: Int = 5672
   private var address: String = "salesq"
   private var username: Option[String] = Option("daikon")
@@ -72,10 +72,13 @@ object dataHandler {
 
   def getSale(jsonMsg: String): String = {
     val mapper: ObjectMapper = new ObjectMapper()
+    var ret = ""
     mapper.registerModule(DefaultScalaModule)
 
     val node: JsonNode = mapper.readTree(jsonMsg)
-    node.get("body").get("section").toString
+    ret = node.get("body").get("section").toString
+    println("***JSCHLESS***Ret from getSale = " + ret)
+    ret 
   }
 
   def storeSale(itemID: String): Unit = {
@@ -86,7 +89,7 @@ object dataHandler {
     var cache: RemoteCache[String, String] = cacheManager.getCache()
     var itemName = itemID
 
-    itemName = itemName.replaceAll("\"", "")
+    println("***JSCHLESS***itemID before call to cache.get = " + itemName)
     var ret = cache.get(itemName)
     if (ret!=null) {
       ret = (ret.toInt+1).toString
@@ -94,7 +97,9 @@ object dataHandler {
     else {
       ret = "1"
     }
+    println("***JSCHLESS***itemID before call to cache.put = " + itemName + " and ret = " + ret)
     cache.put(itemName, ret)
+
     cacheManager.stop()
   }
  
