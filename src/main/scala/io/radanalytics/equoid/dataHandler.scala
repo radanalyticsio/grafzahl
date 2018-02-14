@@ -42,7 +42,6 @@ object dataHandler {
   private var address: String = "salesq"
   private var username: Option[String] = Option("daikon")
   private var password: Option[String] = Option("daikon")
-  private val jsonMessageConverter: AMQPJsonFunction = new AMQPJsonFunction()
   private var infinispanHost: String = "datagrid-hotrod"
   private var infinispanPort: Int = 11333
 
@@ -72,12 +71,8 @@ object dataHandler {
   def messageConverter(message: Message): Option[String] = {
 
     message.getBody match {
-      case body: Data => {
-        val itemID: String = new String(body.getValue.getArray)
-        Some(itemID)
-      }
       case body: AmqpValue => {
-        val itemID: String = body.asInstanceOf[AmqpValue].getValue.asInstanceOf[String]
+        val itemID: String = body.getValue.asInstanceOf[String]
         Some(itemID)
       }
       case _ => None
