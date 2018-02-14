@@ -16,7 +16,7 @@ import scala.collection.immutable._
 
 object checkCache {
 
-  private var infinispanHost: String = "localhost"
+  private var infinispanHost: String = "datagrid-hotrod"
   private var infinispanPort: Int = 11333
   private var key: String = ""
   private var iterations: Int = 1
@@ -39,10 +39,10 @@ object checkCache {
     var cache = cacheManager.getCache[String, Integer]()
 
     var ret = 0
-    
+    var i: Int = 0 
     for (i <- 1 to iterations) {
       ret = cache.get(key)
-      if (ret!=null) {
+      if (ret!=None) {
           ret = ret + 1
       }
       else {
