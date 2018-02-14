@@ -18,24 +18,39 @@ object checkCache {
 
   private var infinispanHost: String = "localhost"
   private var infinispanPort: Int = 11333
+  private var key: String = ""
+  private var iterations: Int = 1
 
   def main(args: Array[String]): Unit = {
-    var key = args(0)
+    if (args.length < 4) {
+      System.err.println("Usage: checkCache <JDGHostname> <JDGPort> <key> <iterations>")
+      System.exit(1)
+    }
+    
+    infinispanHost = args(0)
+    infinispanPort = args(1).toInt
+    key = args(2)
+    iterations = args(3).toInt
+
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
 
     var cache = cacheManager.getCache[String, Integer]()
 
-    var ret = cache.get(key)
-    cache.put("Testing", 3)
-    if (ret!=null) {
-        ret = ret + 1
+    var ret = 0
+    
+    for (i <- 1 to iterations) {
+      ret = cache.get(key)
+      if (ret!=null) {
+          ret = ret + 1
+      }
+      else {
+        ret = 1
+      }
+      println("Key and ret: " + key + " " + ret)
+      Thread.sleep(5000)
     }
-    else {
-      ret = 1
-    }
-    println("Key and ret: " + key + " " + ret)
     cacheManager.stop()
   }
  
