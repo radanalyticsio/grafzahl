@@ -75,7 +75,7 @@ object dataHandler {
         val itemID: String = body.getValue.asInstanceOf[String]
         Some(itemID)
       }
-      case _ => None
+      case x => { println(s"unexpected type ${x.getClass.getName}"); None }
     }
   }
 
