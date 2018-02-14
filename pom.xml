@@ -76,8 +76,8 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!-- used for creating a fat jar with all dependencies on "mvn package" -->
+	    
+	<!-- used for creating a fat jar with all dependencies on "mvn package" -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>

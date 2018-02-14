@@ -2,8 +2,6 @@ package io.radanalytics.equoid
 
 import java.lang.Long
 
-import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import io.radanalytics.streaming.amqp.AMQPJsonFunction
 import io.vertx.core.{AsyncResult, Handler, Vertx}
 import io.vertx.proton._
@@ -45,7 +43,7 @@ object dataHandler {
   private var username: Option[String] = Option("daikon")
   private var password: Option[String] = Option("daikon")
   private val jsonMessageConverter: AMQPJsonFunction = new AMQPJsonFunction()
-  private var infinispanHost: String = "datagrid-hotrod"
+  private var infinispanHost: String = "localhost"
   private var infinispanPort: Int = 11333
 
   def main(args: Array[String]): Unit = {
@@ -64,81 +62,68 @@ object dataHandler {
     infinispanPort = args(6).toInt
     master = "spark://sparky:7077"
 
-    val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContextJson)
+    val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContext)
     
     ssc.start()
     ssc.awaitTerminationOrTimeout(batchIntervalSeconds * 1000 * 1000)
     ssc.stop()
   }
 
-  def getSale(jsonMsg: String): String = {
-    val mapper: ObjectMapper = new ObjectMapper()
-    var ret = ""
-    mapper.registerModule(DefaultScalaModule)
-
-    val node: JsonNode = mapper.readTree(jsonMsg)
-    ret = node.get("body").get("section").toString
-    val log = LogManager.getRootLogger
-    
-    log.warn("***JSCHLESS***Ret from getSale = " + ret)
-    ret 
-  }
-
-  def storeSale(itemID: String): Unit = {
-    val builder: ConfigurationBuilder = new ConfigurationBuilder()
-    builder.addServer().host(infinispanHost).port(infinispanPort)
-    val cacheManager = new RemoteCacheManager(builder.build())
-
-    var cache: RemoteCache[String, String] = cacheManager.getCache()
-    var itemName = itemID
-
-    val log = LogManager.getRootLogger
-    log.warn("***JSCHLESS***itemID before call to cache.get = " + itemName)
-    var ret = cache.get(itemName)
-    if (ret!=null) {
-      ret = (ret.toInt+1).toString
-    }
-    else {
-      ret = "1"
-    }
-    log.warn("***JSCHLESS***itemID before call to cache.put = " + itemName + " and ret = " + ret)
-    cache.put(itemName, ret)
-
-    cacheManager.stop()
-  }
- 
   def messageConverter(message: Message): Option[String] = {
+
     message.getBody match {
       case body: Data => {
         val itemID: String = new String(body.getValue.getArray)
+        Some(itemID)
+      }
+      case body: AmqpValue => {
+        val itemID: String = body.asInstanceOf[AmqpValue].getValue.asInstanceOf[String]
         Some(itemID)
       }
       case _ => None
     }
   }
 
-  def addSale(itemID: String): Unit = {
-    storeSale(itemID)
-  }
+  def storeSale(itemID: String): String = {
+    val builder: ConfigurationBuilder = new ConfigurationBuilder()
+    builder.addServer().host(infinispanHost).port(infinispanPort)
+    
+    val cacheManager = new RemoteCacheManager(builder.build())
 
-  def createStreamingContextJson(): StreamingContext = {
+    val cache= cacheManager.getCache[String, Integer]()
+
+    var ret = cache.get(itemID)
+    if (ret!=null) {
+      ret = ret+1
+    }
+    else {
+      ret = 1
+    }
+    cache.put(itemID, ret)
+    cacheManager.stop()
+    itemID
+  }
+ 
+  def createStreamingContext(): StreamingContext = {
     val ttk = TopK
     val conf = new SparkConf().setMaster(master).setAppName(appName)
     //val conf = new SparkConf().setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
+    
     val ssc = new StreamingContext(conf, Seconds(batchIntervalSeconds))
     ssc.checkpoint(checkpointDir)
-    val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, jsonMessageConverter, StorageLevel.MEMORY_ONLY)
     
-    val saleStream = receiveStream.map(getSale)
+    val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, messageConverter _, StorageLevel.MEMORY_ONLY)
     
-    saleStream.foreachRDD{ rdd =>
+//    val saleStream = receiveStream.map(storeSale)
+    
+    val saleStream = receiveStream.foreachRDD{ rdd =>
       rdd.foreach { record =>
-        addSale(record)
+        storeSale(record)
         ttk+record
       }
     }
-    saleStream.print()
+//    saleStream.print()
     ssc
   }
 }
