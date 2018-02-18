@@ -27,7 +27,7 @@ import org.infinispan.client.hotrod.RemoteCacheManager
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder
 import org.infinispan.client.hotrod.impl.ConfigurationProperties
 
-import scala.collection.immutable._
+import scala.collection.immutable
 
 object dataHandler {
 
@@ -85,7 +85,7 @@ object dataHandler {
     
     val cacheManager = new RemoteCacheManager(builder.build())
 
-    val cache= cacheManager.getCache[String, Integer]()
+    val cache = cacheManager.getCache[String, Integer]()
 
     var ret = cache.get(itemID)
     if (ret!=null) {
@@ -94,13 +94,23 @@ object dataHandler {
     else {
       ret = 1
     }
+    
     cache.put(itemID, ret)
     cacheManager.stop()
     itemID
   }
- 
+  
+  def storeTopK(topk: immutable.Map[String, Int]): Unit = {
+    val builder: ConfigurationBuilder = new ConfigurationBuilder()
+    builder.addServer().host(infinispanHost).port(infinispanPort)
+    val cacheManager = new RemoteCacheManager(builder.build())
+    val cache = cacheManager.getCache[String, Integer]()
+    for ((k,v) <- topk) cache.put(k, v) 
+    cacheManager.stop()
+  }
+
   def createStreamingContext(): StreamingContext = {
-    val ttk = TopK
+    val ttk = TopK.empty[String](10)
     val conf = new SparkConf().setMaster(master).setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     
@@ -111,9 +121,10 @@ object dataHandler {
     
     val saleStream = receiveStream.foreachRDD{ rdd =>
       rdd.foreach { record =>
-        storeSale(record)
+//        storeSale(record)
         ttk+record
       }
+      storeTopK(ttk.topk) 
     }
     ssc
   }
