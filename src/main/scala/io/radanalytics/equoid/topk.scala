@@ -13,11 +13,13 @@ class TopK[V] (
   val k: Int,
   val cms: CountMinSketch,
   val topk: immutable.Map[V, Int],
-  val fmin: Int)  extends Serializable {
-  
+  val fmin: Int,
+  val epsilon: Double,
+  val confidence: Double)  extends Serializable {
+
   // update the TopK sketch w/ a new element 'v'
   def +(v: V): TopK[V] = {
-    val ecms: CountMinSketch = CountMinSketch.create(k, k*5, 13)
+    val ecms: CountMinSketch = CountMinSketch.create(epsilon, confidence, 13)
     val ucms: CountMinSketch = ecms.mergeInPlace(this.cms)
     ucms.add(v, 1)
     val vf = ucms.estimateCount(v).toInt
@@ -27,12 +29,12 @@ class TopK[V] (
       val del = topk.minBy { case (_, f) => f }
       ((topk - del._1) + ((v, vf)), topk.values.min)
     }
-    new TopK[V](k, ucms, utopk, ufmin)
+    new TopK[V](k, ucms, utopk, ufmin, epsilon, confidence)
   }
   
   // combine two TopK sketches, monoidally
   def ++(that: TopK[V]): TopK[V] = {
-    val ecms: CountMinSketch = CountMinSketch.create(k, k*5, 13)
+    val ecms: CountMinSketch = CountMinSketch.create(epsilon, confidence, 13)
     val thatcms = ecms.mergeInPlace(that.cms) 
     val ucms = thatcms.mergeInPlace(this.cms)
     val vu: Set[V] = this.topk.keys.toSet ++ that.topk.keys.toSet
@@ -46,10 +48,13 @@ class TopK[V] (
         (mintk, mintk.values.min)
       }
     }
-    new TopK[V](k, ucms, utopk, ufmin)
+    new TopK[V](k, ucms, utopk, ufmin, epsilon, confidence)
   }
 }
 
+// eps, confidence, seed
 object TopK {
-  def empty[V](k: Int) = new TopK[V](k, CountMinSketch.create(k, k*5, 13), immutable.Map.empty[V, Int], 0)
+  val epsilon = 6
+  val confidence = 0.9
+  def empty[V](k: Int) = new TopK[V](k, CountMinSketch.create(epsilon, confidence, 13), immutable.Map.empty[V, Int], 0, epsilon, confidence)
 }

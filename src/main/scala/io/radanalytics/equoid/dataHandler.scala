@@ -102,7 +102,6 @@ object dataHandler {
   def createStreamingContext(): StreamingContext = {
     val ttk = TopK
     val conf = new SparkConf().setMaster(master).setAppName(appName)
-    //val conf = new SparkConf().setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     
     val ssc = new StreamingContext(conf, Seconds(batchIntervalSeconds))
@@ -110,15 +109,12 @@ object dataHandler {
     
     val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, messageConverter _, StorageLevel.MEMORY_ONLY)
     
-//    val saleStream = receiveStream.map(storeSale)
-    
     val saleStream = receiveStream.foreachRDD{ rdd =>
       rdd.foreach { record =>
         storeSale(record)
         ttk+record
       }
     }
-//    saleStream.print()
     ssc
   }
 }
