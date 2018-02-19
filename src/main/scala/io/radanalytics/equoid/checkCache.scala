@@ -36,7 +36,7 @@ object checkCache {
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
 
-    var cache = cacheManager.getCache[String, Integer]()
+    var cache = cacheManager.getCache[String, Integer]("daikon")
 
     var ret = 0
     var i: Int = 0 
