@@ -10,6 +10,7 @@ import org.infinispan._
 import org.infinispan.client.hotrod.RemoteCache
 import org.infinispan.client.hotrod.RemoteCacheManager
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder
+import org.infinispan.client.hotrod.configuration.Configuration
 import org.infinispan.client.hotrod.impl.ConfigurationProperties
 
 import scala.collection.immutable._
@@ -36,7 +37,7 @@ object checkCache {
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
 
-    var cache = cacheManager.getCache[String, Integer]("daikon")
+    var cache = cacheManager.getCache[String, Integer]()
 
     var ret = 0
     var i: Int = 0 

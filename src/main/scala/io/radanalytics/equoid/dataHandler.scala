@@ -85,7 +85,7 @@ object dataHandler {
     
     val cacheManager = new RemoteCacheManager(builder.build())
 
-    val cache = cacheManager.getCache[String, Integer]("daikon")
+    val cache = cacheManager.getCache[String, Integer]()
 
     var ret = cache.get(itemID)
     if (ret!=null) {
@@ -104,7 +104,7 @@ object dataHandler {
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
-    val cache = cacheManager.getCache[String, Integer]("daikon")
+    val cache = cacheManager.getCache[String, Integer]()
     for ((k,v) <- topk) cache.put(k, v) 
     cacheManager.stop()
   }
