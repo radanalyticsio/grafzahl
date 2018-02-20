@@ -131,8 +131,8 @@ object dataHandler {
       rdd.foreachPartition(partitionOfRecords => {
         val partitionTopK = partitionOfRecords.foldLeft(TopK.empty[String](k, epsilon, confidence))(_+_)
         globalTopK = globalTopK ++ partitionTopK
-        storeTopK(globalTopK.topk)
       })
+      storeTopK(globalTopK.topk)
     })
     ssc
   }
