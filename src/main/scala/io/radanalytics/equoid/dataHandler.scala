@@ -11,6 +11,7 @@ import org.apache.qpid.proton.amqp.messaging.{AmqpValue, Data}
 import org.apache.qpid.proton.message.Message
 import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.rdd
 import org.apache.spark.streaming.amqp.AMQPUtils
 import org.apache.spark.streaming.{Duration, Seconds, StreamingContext}
 
@@ -110,7 +111,7 @@ object dataHandler {
   }
 
   def createStreamingContext(): StreamingContext = {
-    val ttk = TopK.empty[String](10)
+    var globalTopK = TopK.empty[String](10)
     val conf = new SparkConf().setMaster(master).setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     
@@ -118,14 +119,14 @@ object dataHandler {
     ssc.checkpoint(checkpointDir)
     
     val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, messageConverter _, StorageLevel.MEMORY_ONLY)
-    
-    val saleStream = receiveStream.foreachRDD{ rdd =>
-      rdd.foreach { record =>
-//        storeSale(record)
-        ttk+record
-      }
-      storeTopK(ttk.topk) 
-    }
+   
+    val saleStream = receiveStream.foreachRDD(rdd => {
+      rdd.foreachPartition(partitionOfRecords => {
+        val partitionTopK = partitionOfRecords.foldLeft(TopK.empty[String](10))(_+_)
+        globalTopK = globalTopK ++ partitionTopK
+        storeTopK(globalTopK.topk)
+      })
+    })
     ssc
   }
 }
