@@ -54,7 +54,5 @@ class TopK[V] (
 
 // eps, confidence, seed
 object TopK {
-  val epsilon = 6
-  val confidence = 0.9
-  def empty[V](k: Int) = new TopK[V](k, CountMinSketch.create(epsilon, confidence, 13), immutable.Map.empty[V, Int], 0, epsilon, confidence)
+  def empty[V](k: Int, epsilon: Double, confidence: Double) = new TopK[V](k, CountMinSketch.create(epsilon, confidence, 13), immutable.Map.empty[V, Int], 0, epsilon, confidence)
 }

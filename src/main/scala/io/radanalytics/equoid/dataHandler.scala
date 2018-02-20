@@ -45,11 +45,15 @@ object dataHandler {
   private var password: Option[String] = Option("daikon")
   private var infinispanHost: String = "datagrid-hotrod"
   private var infinispanPort: Int = 11333
+  
+  private var k: Int = 10
+  private var epsilon: Double = 6.0
+  private var confidence: Double = 0.9
 
   def main(args: Array[String]): Unit = {
 
-    if (args.length < 7) {
-      System.err.println("Usage: dataHandler <AMQHostname> <AMQPort> <AMQUsername> <AMQPassword> <AMQQueue> <JDGHostname> <JDGPort>")
+    if (args.length < 10) {
+      System.err.println("Usage: dataHandler <AMQHostname> <AMQPort> <AMQUsername> <AMQPassword> <AMQQueue> <JDGHostname> <JDGPort> <k> <epsilon> <confidence>")
       System.exit(1)
     }
 
@@ -60,6 +64,9 @@ object dataHandler {
     address = args(4)
     infinispanHost = args(5)
     infinispanPort = args(6).toInt
+    k = args(7).toInt
+    epsilon = args(8).toDouble
+    confidence = args(9).toDouble
     master = "spark://sparky:7077"
 
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContext)
@@ -106,13 +113,12 @@ object dataHandler {
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
     val cache = cacheManager.getCache[String, Integer]()
-    cache.clear()
-    for ((k,v) <- topk) cache.put(k, v) 
+    for ((key,v) <- topk) cache.put(key, v) 
     cacheManager.stop()
   }
 
   def createStreamingContext(): StreamingContext = {
-    var globalTopK = TopK.empty[String](10)
+    var globalTopK = TopK.empty[String](k, epsilon, confidence)
     val conf = new SparkConf().setMaster(master).setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     
@@ -123,7 +129,7 @@ object dataHandler {
    
     val saleStream = receiveStream.foreachRDD(rdd => {
       rdd.foreachPartition(partitionOfRecords => {
-        val partitionTopK = partitionOfRecords.foldLeft(TopK.empty[String](10))(_+_)
+        val partitionTopK = partitionOfRecords.foldLeft(TopK.empty[String](k, epsilon, confidence))(_+_)
         globalTopK = globalTopK ++ partitionTopK
         storeTopK(globalTopK.topk)
       })
