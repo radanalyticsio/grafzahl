@@ -106,6 +106,7 @@ object dataHandler {
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
     val cache = cacheManager.getCache[String, Integer]()
+    cache.clear()
     for ((k,v) <- topk) cache.put(k, v) 
     cacheManager.stop()
   }
