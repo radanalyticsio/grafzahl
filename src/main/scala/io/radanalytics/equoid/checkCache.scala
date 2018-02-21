@@ -42,11 +42,11 @@ object checkCache {
     var ret: Int = 0 
     for (i <- 1 to iterations) {
       ret = cache.get(key)
-      val isNull = Option(ret).isDefined
-      if (isNull)
-        ret = 1
-      else
+      val isNotNull = Option(ret).isDefined
+      if (isNotNull)
         ret = ret + 1
+      else
+        ret = 1
       println("Key and ret: " + key + " " + ret)
       Thread.sleep(5000)
     }
