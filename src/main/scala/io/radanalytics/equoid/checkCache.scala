@@ -13,7 +13,7 @@ import org.infinispan.client.hotrod.configuration.ConfigurationBuilder
 import org.infinispan.client.hotrod.configuration.Configuration
 import org.infinispan.client.hotrod.impl.ConfigurationProperties
 
-import scala.collection.immutable._
+import scala.collection.immutable
 
 object checkCache {
 
@@ -38,17 +38,15 @@ object checkCache {
     val cacheManager = new RemoteCacheManager(builder.build())
 
     var cache = cacheManager.getCache[String, Integer]()
-
-    var ret = 0
     var i: Int = 0 
+    var ret: Int = 0 
     for (i <- 1 to iterations) {
       ret = cache.get(key)
-      if (ret!=None) {
-          ret = ret + 1
-      }
-      else {
+      val isNull = Option(ret).isDefined
+      if (isNull)
         ret = 1
-      }
+      else
+        ret = ret + 1
       println("Key and ret: " + key + " " + ret)
       Thread.sleep(5000)
     }
