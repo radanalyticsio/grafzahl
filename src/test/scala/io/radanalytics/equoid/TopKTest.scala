@@ -9,7 +9,7 @@ class TopKTest extends FlatSpec {
   def randomSeq(limit: Int) = Seq.fill(limit)(util.Random.nextInt)
   def randomSeqTopk(limit: Int) = randomSeq(limit).foldLeft(emptyi)(_+_)
   def helperTopk(start: Int, end: Int, step: Int = 1) =
-    (start to end by step).foldLeft(emptyi)((x, y) => Seq.fill(y)(y).foldLeft(x)((a,b) => a+b))
+    (start to end by step).foldLeft(emptyi)((x, y) => Seq.fill(y)(y).foldLeft(x)(_+_))
 
   "A TopK" should "not be null after creation" in {
     assert(TopK.empty[String](k = 10, epsilon = 6.0, confidence = 0.9) != null)
@@ -40,10 +40,10 @@ class TopKTest extends FlatSpec {
     assert(topK1.cms.estimateCount(element) < topK2.cms.estimateCount(element))
   }
 
-  "Adding the same element couple of times" should "return exact results" in {
+  "Adding the same element couple of times" should "return good enough results" in {
     val element = "Kpot"
     val result = List.fill(42)("Kpot").foldLeft(empty[String])(_+_)
-    assert(result.cms.estimateCount(element) == 42)
+    assert(Math.abs(result.cms.estimateCount(element) - 42) < 5)
   }
 
   "A TopK + element" should "return another TopK in which the estimated frequency for the element is higher" in {
@@ -146,6 +146,24 @@ class TopKTest extends FlatSpec {
     val t4 = helperTopk(21, 3, -2)
     assert((t1 ++ t2).cms == (t3 ++ t4).cms)
     assert((t1 ++ t2).topk == (t3 ++ t4).topk)
+  }
+  
+  
+  behavior of "Other"
+  
+  "Some real-world example" should "contain the top k elements" in {
+    val geometricTopk = (1 to 7).flatMap(i => {
+      val num = Math.pow(2, i).toInt
+      List.fill(num)(s"el-$num")
+    }).foldLeft(empty[String])(_+_)
+    val noise1 = (1 to 15).foldLeft(empty[String])((x, y) => Seq.fill(y)(s"el-$y").foldLeft(x)(_+_))
+    val noise2 = randomSeq(1000).map("el-" + _).foldLeft(empty[String])(_+_)
+    
+    val topk = noise1 ++ geometricTopk ++ noise2
+    assert(topk.topk.contains("el-128"))
+    assert(topk.topk.contains("el-64"))
+    assert(topk.topk.contains("el-32"))
+    assert(topk.topk.maxBy(_._2)._1 == "el-128")
   }
 
 }
