@@ -13,7 +13,7 @@ oc new-app --template=oshinko-java-spark-build-dc -p APPLICATION_NAME=equoid-dat
 
 3. Publish some data to queue `salesq` per https://github.com/eldritchjs/equoid-publisher
 
-## Test class
+## checkCache test class
 
 1. Start test
 ```
