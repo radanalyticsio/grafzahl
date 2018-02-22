@@ -3,6 +3,13 @@ package io.radanalytics.equoid
 import org.scalatest._
 
 class TopKTest extends FlatSpec {
+  
+  def empty[T] = TopK.empty[T](k = 10, epsilon = 0.001, confidence = 0.999)
+  def emptyi = empty[Int]
+  def randomSeq(limit: Int) = Seq.fill(limit)(util.Random.nextInt)
+  def randomSeqTopk(limit: Int) = randomSeq(limit).foldLeft(emptyi)(_+_)
+  def helperTopk(start: Int, end: Int, step: Int = 1) =
+    (start to end by step).foldLeft(emptyi)((x, y) => Seq.fill(y)(y).foldLeft(x)((a,b) => a+b))
 
   "A TopK" should "not be null after creation" in {
     assert(TopK.empty[String](k = 10, epsilon = 6.0, confidence = 0.9) != null)
@@ -11,52 +18,45 @@ class TopKTest extends FlatSpec {
   behavior of "TopK::+ (append)"
 
   "Empty TopK + element" should "contain just the element" in {
-    val topK = TopK.empty[String](k = 10, epsilon = 6.0, confidence = 0.9)
     val element = "Kpot"
-    val resultingTopK = topK + element
+    val resultingTopK = empty[String] + element
     assert(resultingTopK.cms.estimateCount(element) == 1)
   }
 
   "The order of addition" should "not make any difference" in {
-    val emptyTopK1 = TopK.empty[Int](k = 10, epsilon = 6.0, confidence = 0.9)
-    val emptyTopK2 = TopK.empty[Int](k = 10, epsilon = 6.0, confidence = 0.9)
-    val randomSeq = Seq.fill(100)(util.Random.nextInt)
-    val topK1 = randomSeq.foldLeft(emptyTopK1)(_+_)
-    val topK2 = randomSeq.reverse.foldLeft(emptyTopK1)(_+_)
+    val topK1 = helperTopk(4, 22)
+    val topK2 = helperTopk(22, 4, -1)
     assert(topK1.cms == topK2.cms)
-    // this currently fails, but shouldn't
+    // this one is failing
     // assert(topK1.topk == topK2.topk)
   }
 
   "Adding the same element twice" should "increase the frequency" in {
-    val emptyTopK = TopK.empty[String](k = 10, epsilon = 6.0, confidence = 0.9)
     val element = "Kpot"
-    val topK1 = emptyTopK + element
+    val nothing = empty[String]
+    val topK1 = nothing + element
     val topK2 = topK1 + element
-    assert(emptyTopK.cms.estimateCount(element) < topK1.cms.estimateCount(element))
+    assert(nothing.cms.estimateCount(element) < topK1.cms.estimateCount(element))
     assert(topK1.cms.estimateCount(element) < topK2.cms.estimateCount(element))
   }
 
   "Adding the same element couple of times" should "return exact results" in {
-    // because there are no hash collisions yet
-    val emptyTopK = TopK.empty[String](k = 10, epsilon = 6.0, confidence = 0.9)
     val element = "Kpot"
-    val result = List.fill(42)("Kpot").foldLeft(emptyTopK)(_+_)
+    val result = List.fill(42)("Kpot").foldLeft(empty[String])(_+_)
     assert(result.cms.estimateCount(element) == 42)
   }
 
   "A TopK + element" should "return another TopK in which the estimated frequency for the element is higher" in {
-    val emptyTopK = TopK.empty[Int](k = 10, epsilon = 6.0, confidence = 0.9)
-    val randomSeq = Seq.fill(1000)(util.Random.nextInt)
-    val randomElement = randomSeq(0)
-    val topK = randomSeq.foldLeft(emptyTopK)(_+_)
+    val randomSequence = randomSeq(1000)
+    val randomElement = randomSequence(0)
+    val topK = randomSequence.foldLeft(emptyi)(_+_)
     // add the same element 10 times
     val result = List.fill(10)(randomElement).foldLeft(topK)(_+_)
-    assert(result.cms.estimateCount(randomElement) - topK.cms.estimateCount(randomElement) == 10)
+    assert(Math.abs(result.cms.estimateCount(randomElement) - topK.cms.estimateCount(randomElement) - 10 ) < 2)
   }
 
   "the +" should "not change its operands" in {
-    val topK = Seq.fill(100)(util.Random.nextInt).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
+    val topK = randomSeqTopk(100)
     // hashCode is not perfect for this purpose, but it's good enough
     val originalHashCode = topK.cms.hashCode
     topK + 42 // we don't care about the result
@@ -68,49 +68,58 @@ class TopKTest extends FlatSpec {
 
   // t ++ empty == t
   "A TopK ++ empty TopK" should "do nothing" in {
-    val emptyTopK = TopK.empty[Int](k = 10, epsilon = 6.0, confidence = 0.9)
-    val topK = Seq.fill(10)(util.Random.nextInt).foldLeft(emptyTopK)(_+_)
-    val result1 = topK ++ emptyTopK
-    val result2 = emptyTopK ++ topK
+    val topK = randomSeqTopk(10)
+    val result1 = topK ++ emptyi
+    val result2 = emptyi ++ topK
     assert(topK.cms == result1.cms)
     assert(result1.cms == result2.cms)
-    // this currently fails, but shouldn't
-    // assert(topK.topk == result1.topk)
-    // assert(result1.topk == result2.topk)
+    assert(topK.topk == result1.topk)
+    assert(result1.topk == result2.topk)
   }
 
-  "++" should "be associative" in {
-    val a = Seq.fill(10)(util.Random.nextInt).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
-    val b = Seq.fill(20)(util.Random.nextInt).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
-    val c = Seq.fill(30)(util.Random.nextInt).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
+  "++" should "be associative1" in {
+    val a = helperTopk(1, 11)
+    val b = helperTopk(12, 18)
+    val c = helperTopk(19, 25)
     assert(((a ++ b) ++ c).cms == (a ++ (b ++ c)).cms)
-    // this currently fails, but shouldn't
-    // assert(((a ++ b) ++ c).topk == (a ++ (b ++ c)).topk)
+    assert(((a ++ b) ++ c).topk == (a ++ (b ++ c)).topk)
   }
 
-  "++" should "be commutative" in {
-    val a = Seq.fill(10)(util.Random.nextInt).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
-    val b = Seq.fill(20)(util.Random.nextInt).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
+  "++" should "be associative2" in {
+    val a = helperTopk(1, 11)
+    val b = helperTopk(3, 7)
+    val c = helperTopk(5, 19)
+    assert(((a ++ b) ++ c).cms == (a ++ (b ++ c)).cms)
+    assert(((a ++ b) ++ c).topk == (a ++ (b ++ c)).topk)
+  }
+
+  "++" should "be commutative1" in {
+    val a = helperTopk(4, 11)
+    val b = helperTopk(2, 13)
     assert((a ++ b).cms == (b ++ a).cms)
-    // todo: delete this comment
-    // this currently passes, which is strange actually wrt the above failing :)
+    assert((a ++ b).topk == (b ++ a).topk)
+  }
+
+  "++" should "be commutative2" in {
+    val a = helperTopk(4, 11)
+    val b = helperTopk(13, 19)
+    assert((a ++ b).cms == (b ++ a).cms)
     assert((a ++ b).topk == (b ++ a).topk)
   }
 
   "(t1 ++ t2) + e == (t1 + e) ++ t2 == t1 ++ (t2 + e)" should "hold" in {
-    val t1 = Seq.fill(10)(util.Random.nextInt).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
-    val t2 = Seq.fill(20)(util.Random.nextInt).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
+    val t1 = helperTopk(4, 11)
+    val t2 = helperTopk(3, 16)
     val e = Int.MinValue
     assert(((t1 ++ t2) + e).cms == ((t1 + e) ++ t2).cms)
     assert((t1 ++ (t2 + e)).cms == ((t1 + e) ++ t2).cms)
-    // this currently fails, but shouldn't
-    // assert(((t1 ++ t2) + e).topk == ((t1 + e) ++ t2).topk)
-    // assert((t1 ++ (t2 + e)).topk == ((t1 + e) ++ t2).topk)
+    assert(((t1 ++ t2) + e).topk == ((t1 + e) ++ t2).topk)
+    assert((t1 ++ (t2 + e)).topk == ((t1 + e) ++ t2).topk)
   }
 
   "the ++" should "not change its operands" in {
-    val t1 = Seq.fill(10000)(util.Random.nextInt).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
-    val t2 = Seq.fill(10000)(util.Random.nextInt).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
+    val t1 = helperTopk(14, 30)
+    val t2 = helperTopk(7, 21)
     val originalHashCode1 = t1.cms.hashCode
     val originalHashCode2 = t2.cms.hashCode
     t1 ++ t2 // don't care about the result
@@ -119,20 +128,24 @@ class TopKTest extends FlatSpec {
   }
 
   "the frequency of a common element" should "increase if it's contained in both topKs" in {
-    val t1 = Seq.fill(10000)(util.Random.nextInt).foldLeft(TopK.empty[Int](100, 6.0, 0.9))(_+_)
-    val t2 = Seq.fill(10000)(util.Random.nextInt).foldLeft(TopK.empty[Int](100, 6.0, 0.9))(_+_)
+    val t1 = helperTopk(14, 30)
+    val t2 = helperTopk(7, 21)
     val e = 42424242
-    val frequent = Seq.fill(100)(e).foldLeft(TopK.empty[Int](10, 6.0, 0.9))(_+_)
+    val frequent = Seq.fill(100)(e).foldLeft(emptyi)(_+_)
 
     val res1 = t1 ++ frequent
     val res2 = frequent ++ t2
     assert(res1.cms.estimateCount(e) < (res1 ++ res2).cms.estimateCount(e))
+    assert(Math.abs((res1 ++ res2).cms.estimateCount(e) - res1.cms.estimateCount(e) - 100) < 5)
+  }
 
-    // todo: following lines are fishy
-    // println(res1.cms.estimateCount(e)) // prints 10100
-    // println(res2.cms.estimateCount(e)) // prints 10100
-    // println((res1 ++ res2).cms.estimateCount(e)) // prints 20200
-    // assert((res1 ++ res2).cms.estimateCount(e) - res1.cms.estimateCount(e) == 100)
+  "The order of concatenation" should "not make any difference" in {
+    val t1 = helperTopk(3, 22, 2)
+    val t2 = helperTopk(4, 22, 2)
+    val t3 = helperTopk(22, 3, -2)
+    val t4 = helperTopk(21, 3, -2)
+    assert((t1 ++ t2).cms == (t3 ++ t4).cms)
+    assert((t1 ++ t2).topk == (t3 ++ t4).topk)
   }
 
 }
