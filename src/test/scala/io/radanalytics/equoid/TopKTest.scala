@@ -166,4 +166,25 @@ class TopKTest extends FlatSpec {
     assert(topk.topk.maxBy(_._2)._1 == "el-128")
   }
 
+  def sanEmpty[T] = TopK.empty[T](k = 3, epsilon = 0.001, confidence = 0.999)
+  
+  "Geometrically distributed data" should "contain the top 3 elements" in {
+    val geometricTopk = (1 to 7).flatMap(i => {
+      val num = Math.pow(2, i).toInt
+      List.fill(num)(s"el-$num")
+    }).foldLeft(sanEmpty[String])(_+_)
+    val noise1 = (1 to 15).foldLeft(sanEmpty[String])((x, y) => Seq.fill(y)(s"el-$y").foldLeft(x)(_+_))
+    val noise2 = randomSeq(10000).map("el-" + _).foldLeft(sanEmpty[String])(_+_)
+    
+    val topk = noise1 ++ geometricTopk ++ noise2
+    assert(topk.topk.contains("el-128"))
+    assert(topk.topk.contains("el-64"))
+    assert(topk.topk.contains("el-32"))
+    assert(topk.topk.maxBy(_._2)._1 == "el-128")
+    assert(topk.topk.minBy(_._2)._1 == "el-32")
+
+  }
+
 }
+
+
