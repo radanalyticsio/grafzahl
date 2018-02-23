@@ -27,8 +27,7 @@ class TopKTest extends FlatSpec {
     val topK1 = helperTopk(4, 22)
     val topK2 = helperTopk(22, 4, -1)
     assert(topK1.cms == topK2.cms)
-    // this one is failing
-    // assert(topK1.topk == topK2.topk)
+    assert(topK1.topk == topK2.topk)
   }
 
   "Adding the same element twice" should "increase the frequency" in {
