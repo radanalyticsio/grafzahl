@@ -30,6 +30,17 @@ class TopKTest extends FlatSpec {
     assert(topK1.topk == topK2.topk)
   }
 
+  "The fmin" should "be correctly calculated" in {
+    val topK1 = helperTopk(6, 20)
+    val topK2 = helperTopk(1, 4)
+    val topK3 = helperTopk(5, 13)
+    val topK4 = helperTopk(5, 14)
+    assert(topK1.fmin == 11)
+    assert(topK2.fmin == 0)
+    assert(topK3.fmin == 0)
+    assert(topK4.fmin == 5)
+  }
+
   "Adding the same element twice" should "increase the frequency" in {
     val element = "Kpot"
     val nothing = empty[String]

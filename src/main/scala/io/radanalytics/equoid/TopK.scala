@@ -22,9 +22,14 @@ class TopK[V] (
     val ucms: CountMinSketch = ecms.mergeInPlace(this.cms)
     ucms.add(v, 1)
     val vf = ucms.estimateCount(v).toInt
-    val (utopk, ufmin) = if (topk.size < k || topk.contains(v)) {
-      (topk + (v -> vf), vf)
-    } else if (vf <= fmin) (topk, fmin) else {
+    val (utopk, ufmin) = if (topk.size < k) { // hasn't been filled
+      (topk + (v -> vf), math.min(vf, fmin))
+    } else if (topk.contains(v)) { // increment existing
+      val ntopk = topk + (v -> vf)
+      (ntopk, if (vf - fmin > 2) fmin else ntopk.values.min)
+    } else if (vf <= fmin) {
+      (topk, fmin) // do nothing, it's lower than the least frequent
+    } else { // replace with the least frequent
       val del = topk.minBy { case (_, f) => f }
       ((topk - del._1) + ((v, vf)), topk.values.min)
     }
@@ -44,9 +49,9 @@ class TopK[V] (
     new TopK[V](k, ucms, utopk, ufmin, epsilon, confidence)
   }
 
-  def top(n: Int): immutable.SortedMap[V, Int] = throw new NotImplementedError
+  def top(n: Int): Map[V, Int] = immutable.ListMap(topk.toVector.sortBy(- _._2).take(n):_*)
 
-  override def toString: String = throw new NotImplementedError
+  override def toString: String = "[" + top(k).foldLeft("")((a,b) => a + s", ${b._1} ~${b._2}×").drop(2) + "]"
 }
 
 // eps, confidence, seed
