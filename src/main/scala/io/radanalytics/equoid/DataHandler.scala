@@ -21,6 +21,7 @@ import org.apache.spark.sql.SparkSession
 
 import org.apache.spark.util.sketch
 import scala.util.Random
+import scala.util.Properties
 
 import org.infinispan._
 import org.infinispan.client.hotrod.RemoteCache
@@ -30,7 +31,7 @@ import org.infinispan.client.hotrod.impl.ConfigurationProperties
 
 import scala.collection.immutable
 
-object dataHandler {
+object DataHandler {
 
   private var master: String = "local[2]"
   private val appName: String = getClass().getSimpleName()
@@ -38,35 +39,13 @@ object dataHandler {
   private val batchIntervalSeconds: Int = 1
   private val checkpointDir: String = "/tmp/equoid-data-handler"
 
-  private var amqpHost: String = "localhost"
-  private var amqpPort: Int = 5672
-  private var address: String = "salesq"
-  private var username: Option[String] = Option("daikon")
-  private var password: Option[String] = Option("daikon")
-  private var infinispanHost: String = "datagrid-hotrod"
-  private var infinispanPort: Int = 11333
+  def getProp(camelCaseName: String, defaultValue: String): String = {
+    val snakeCaseName = camelCaseName.replaceAll("(.)(\\p{Upper})", "$1_$2").toUpperCase()
+    Properties.envOrElse(snakeCaseName, Properties.scalaPropOrElse(snakeCaseName, defaultValue))
+  }  
   
-  private var k: Int = 10
-  private var epsilon: Double = 6.0
-  private var confidence: Double = 0.9
-
   def main(args: Array[String]): Unit = {
 
-    if (args.length < 10) {
-      System.err.println("Usage: dataHandler <AMQHostname> <AMQPort> <AMQUsername> <AMQPassword> <AMQQueue> <JDGHostname> <JDGPort> <k> <epsilon> <confidence>")
-      System.exit(1)
-    }
-
-    amqpHost = args(0)
-    amqpPort = args(1).toInt
-    username = Option(args(2))
-    password = Option(args(3))
-    address = args(4)
-    infinispanHost = args(5)
-    infinispanPort = args(6).toInt
-    k = args(7).toInt
-    epsilon = args(8).toDouble
-    confidence = args(9).toDouble
     master = "spark://sparky:7077"
 
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContext)
@@ -87,7 +66,7 @@ object dataHandler {
     }
   }
 
-  def storeSale(itemID: String): String = {
+  def storeSale(itemID: String, infinispanHost: String, infinispanPort: Int): String = {
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
     
@@ -108,7 +87,7 @@ object dataHandler {
     itemID
   }
   
-  def storeTopK(topk: immutable.Map[String, Int]): Unit = {
+  def storeTopK(topk: immutable.Map[String, Int], infinispanHost: String, infinispanPort: Int): Unit = {
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
@@ -118,6 +97,16 @@ object dataHandler {
   }
 
   def createStreamingContext(): StreamingContext = {
+    val amqpHost = getProp("amqpHost", "broker-amq-amqp")
+    val amqpPort = getProp("amqpPort", "5672").toInt
+    val username = Option(getProp("amqpUsername", "daikon"))
+    val password = Option(getProp("amqpPassword", "daikon"))
+    val address = getProp("queueName", "salesq")
+    val infinispanHost = getProp("jdgHost", "datagrid-hotrod")
+    val infinispanPort = getProp("jdgPort", "11333").toInt
+    val k = getProp("cmsK", "3").toInt
+    val epsilon = getProp("cmsEpsilon", "0.01").toDouble
+    val confidence = getProp("cmsConfidence", "0.9").toDouble    
     var globalTopK = TopK.empty[String](k, epsilon, confidence)
     val conf = new SparkConf().setMaster(master).setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
@@ -131,7 +120,7 @@ object dataHandler {
       rdd.foreachPartition(partitionOfRecords => {
         val partitionTopK = partitionOfRecords.foldLeft(TopK.empty[String](k, epsilon, confidence))(_+_)
         globalTopK = globalTopK ++ partitionTopK
-        storeTopK(globalTopK.topk)
+        storeTopK(globalTopK.topk, infinispanHost, infinispanPort)
       })
     })
     ssc
