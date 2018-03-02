@@ -17,7 +17,7 @@ def commonSettings = Seq(
     "org.infinispan" % "infinispan-core" % "9.1.4.Final",
     "org.infinispan" % "infinispan-client-hotrod" % "9.1.4.Final",
     "org.infinispan" %% "infinispan-spark" % "0.6",    
-    "io.radanalytics" %% "spark-streaming-amqp" % "0.3.1",
+    ("io.radanalytics" %% "spark-streaming-amqp" % "0.3.1").exclude("com.fasterxml.jackson.core", "jackson-databind"),
     "org.apache.spark" %% "spark-core" % sparkVersion % Provided,
     "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
     "org.apache.spark" %% "spark-streaming" % sparkVersion % Provided,
@@ -27,3 +27,22 @@ def commonSettings = Seq(
 )
 
 seq(commonSettings:_*)
+
+test in assembly := {}
+
+// not sure what strategy to use for these
+// see https://github.com/sbt/sbt-assembly
+assemblyMergeStrategy in assembly := {
+  case "META-INF/DEPENDENCIES.txt" => MergeStrategy.discard
+  case "META-INF/io.netty.versions.properties" => MergeStrategy.discard
+  case "features.xml" => MergeStrategy.discard
+  case x =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(x)
+}
+
+assemblyShadeRules in assembly := Seq(
+  // ShadeRule.zap("scala.**").inAll,
+  // ShadeRule.zap("org.slf4j.**").inAll
+)
+
