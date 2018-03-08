@@ -87,7 +87,7 @@ object DataHandler {
     itemID
   }
   
-  def storeTopK(topk: immutable.Map[String, Int], infinispanHost: String, infinispanPort: Int): Unit = {
+  def storeTopK(topk: Vector[(String, Int)], infinispanHost: String, infinispanPort: Int): Unit = {
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
