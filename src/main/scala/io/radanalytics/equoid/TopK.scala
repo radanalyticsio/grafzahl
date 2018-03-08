@@ -79,7 +79,7 @@ class TopK[V] (
 object TopK {
   def epsilonDefault = 0.01
   def confidenceDefault = 0.99
-  def seedDefault = scala.util.Random.nextInt()
+  def seedDefault = 13 //scala.util.Random.nextInt()
 
   def empty[V](k: Int,
       epsilon: Double = epsilonDefault,
