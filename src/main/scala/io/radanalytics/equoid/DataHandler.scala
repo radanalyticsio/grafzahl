@@ -141,13 +141,15 @@ object DataHandler {
     val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, messageConverter _, StorageLevel.MEMORY_ONLY)
    
     val saleStream = receiveStream.foreachRDD(rdd => {
+      val intervalCounter = IntervalAccumulator.getInstance(rdd.sparkContext)
+      val interval = intervalCounter.sum
+
       rdd.foreachPartition(partitionOfRecords => {
         val partitionTopK = partitionOfRecords.foldLeft(TopK.empty[String](k, epsilon, confidence))(_+_)
         globalTopK = globalTopK ++ partitionTopK
-        val intervalCounter = IntervalAccumulator.getInstance(rdd.sparkContext)
-        storeTopK(intervalCounter.sum, globalTopK.topk, infinispanHost, infinispanPort)
-        intervalCounter.add(1)
+        storeTopK(interval, globalTopK.topk, infinispanHost, infinispanPort)
       })
+      intervalCounter.add(1)
     })
     ssc
   }
