@@ -10,6 +10,7 @@ import org.apache.log4j.{Level, LogManager, PropertyConfigurator, Logger}
 import org.apache.qpid.proton.amqp.messaging.{AmqpValue, Data}
 import org.apache.qpid.proton.message.Message
 import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.rdd
 import org.apache.spark.streaming.amqp.AMQPUtils
@@ -20,6 +21,7 @@ import io.radanalytics.equoid._
 import org.apache.spark.sql.SparkSession
 
 import org.apache.spark.util.sketch
+import org.apache.spark.util.LongAccumulator
 import scala.util.Random
 import scala.util.Properties
 
@@ -30,6 +32,22 @@ import org.infinispan.client.hotrod.configuration.ConfigurationBuilder
 import org.infinispan.client.hotrod.impl.ConfigurationProperties
 
 import scala.collection.immutable
+
+object IntervalAccumulator {
+
+  @volatile private var instance: LongAccumulator = null
+
+  def getInstance(sc: SparkContext): LongAccumulator = {
+    if (instance == null) {
+      synchronized { 
+        if (instance == null) {
+          instance = sc.longAccumulator("IntervalCounter")
+        }
+      }
+    }
+    instance
+  }
+}
 
 object DataHandler {
 
@@ -66,34 +84,39 @@ object DataHandler {
     }
   }
 
+/*
   def storeSale(itemID: String, infinispanHost: String, infinispanPort: Int): String = {
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
     
     val cacheManager = new RemoteCacheManager(builder.build())
 
-    val cache = cacheManager.getCache[String, Integer]()
+    val cache = cacheManager.getCache[String, String]()
 
-    var ret = cache.get(itemID)
+    var ret:String = cache.get(itemID)
+   
     if (ret!=null) {
-      ret = ret+1
+      ret = (ret.toInt + 1).toString
     }
     else {
-      ret = 1
+      ret = "1"
     }
     
     cache.put(itemID, ret)
     cacheManager.stop()
     itemID
   }
-  
-  def storeTopK(topk: Vector[(String, Int)], infinispanHost: String, infinispanPort: Int): Unit = {
+ */
+
+  def storeTopK(interval: Long, topk: Vector[(String, Int)], infinispanHost: String, infinispanPort: Int): Unit = {
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
-    val cache = cacheManager.getCache[String, Integer]()
-    cache.clear()
-    for ((key,v) <- topk) cache.put(key, v) 
+    val cache = cacheManager.getCache[String, String]()
+    var topkstr: String = ""
+
+    for ((key,v) <- topk) topkstr = topkstr + key + ":" + v.toString + ";" 
+    cache.put(interval.toString, topkstr)
     cacheManager.stop()
   }
 
@@ -121,7 +144,9 @@ object DataHandler {
       rdd.foreachPartition(partitionOfRecords => {
         val partitionTopK = partitionOfRecords.foldLeft(TopK.empty[String](k, epsilon, confidence))(_+_)
         globalTopK = globalTopK ++ partitionTopK
-        storeTopK(globalTopK.topk, infinispanHost, infinispanPort)
+        val intervalCounter = IntervalAccumulator.getInstance(rdd.sparkContext)
+        storeTopK(intervalCounter.sum, globalTopK.topk, infinispanHost, infinispanPort)
+        intervalCounter.add(1)
       })
     })
     ssc
