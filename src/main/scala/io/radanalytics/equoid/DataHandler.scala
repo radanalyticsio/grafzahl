@@ -36,7 +36,7 @@ object DataHandler {
   private var master: String = "local[2]"
   private val appName: String = getClass().getSimpleName()
 
-  private val batchIntervalSeconds: Int = 1
+  private val batchIntervalSeconds: Int = 5
   private val checkpointDir: String = "/tmp/equoid-data-handler"
 
   def getProp(camelCaseName: String, defaultValue: String): String = {
@@ -92,6 +92,7 @@ object DataHandler {
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
     val cache = cacheManager.getCache[String, Integer]()
+    cache.clear()
     for ((key,v) <- topk) cache.put(key, v) 
     cacheManager.stop()
   }
