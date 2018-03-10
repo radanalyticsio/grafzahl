@@ -41,9 +41,9 @@ object CheckCache {
     var i: Int = 0 
     var ret: String = "" 
     for (i <- 1 to iterations) {
-      for (key <- cache.keySet.toArray) {
-        ret = cache.get(key)
-        println(key + ": " + ret)
+      for (k <- cache.keySet.toArray) {
+        ret = cache.get(k)
+        println(k + ": " + ret)
       }
       Thread.sleep(10000)
     }
