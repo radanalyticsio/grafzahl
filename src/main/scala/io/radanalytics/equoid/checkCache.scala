@@ -15,7 +15,7 @@ import org.infinispan.client.hotrod.impl.ConfigurationProperties
 
 import scala.collection.immutable
 
-object checkCache {
+object CheckCache {
 
   private var infinispanHost: String = "datagrid-hotrod"
   private var infinispanPort: Int = 11333
@@ -24,7 +24,7 @@ object checkCache {
 
   def main(args: Array[String]): Unit = {
     if (args.length < 4) {
-      System.err.println("Usage: checkCache <JDGHostname> <JDGPort> <key> <iterations>")
+      System.err.println("Usage: CheckCache <JDGHostname> <JDGPort> <key> <iterations>")
       System.exit(1)
     }
     
@@ -37,18 +37,15 @@ object checkCache {
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
 
-    var cache = cacheManager.getCache[String, Integer]()
+    var cache = cacheManager.getCache[String, String]()
     var i: Int = 0 
-    var ret: Int = 0 
+    var ret: String = "" 
     for (i <- 1 to iterations) {
-      ret = cache.get(key)
-      val isNotNull = Option(ret).isDefined
-      if (isNotNull)
-        ret = ret + 1
-      else
-        ret = 1
-      println("Key and ret: " + key + " " + ret)
-      Thread.sleep(5000)
+      for (key <- cache.keySet.toArray) {
+        ret = cache.get(key)
+        println(key + ": " + ret)
+      }
+      Thread.sleep(10000)
     }
     cacheManager.stop()
   }
