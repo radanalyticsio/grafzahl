@@ -14,25 +14,20 @@ import org.infinispan.client.hotrod.configuration.Configuration
 import org.infinispan.client.hotrod.impl.ConfigurationProperties
 
 import scala.collection.immutable
+import scala.util.Properties
 
 object CheckCache {
 
-  private var infinispanHost: String = "datagrid-hotrod"
-  private var infinispanPort: Int = 11333
-  private var key: String = ""
-  private var iterations: Int = 1
+  def getProp(camelCaseName: String, defaultValue: String): String = {
+        val snakeCaseName = camelCaseName.replaceAll("(.)(\\p{Upper})", "$1_$2").toUpperCase()
+            Properties.envOrElse(snakeCaseName, Properties.scalaPropOrElse(snakeCaseName, defaultValue))
+              }  
 
   def main(args: Array[String]): Unit = {
-    if (args.length < 4) {
-      System.err.println("Usage: CheckCache <JDGHostname> <JDGPort> <key> <iterations>")
-      System.exit(1)
-    }
+    val infinispanHost = getProp("jdgHost", "localhost")
+    val infinispanPort = getProp("jdgPort", "11222").toInt
+    val iterations = getProp("ccIter", "15").toInt
     
-    infinispanHost = args(0)
-    infinispanPort = args(1).toInt
-    key = args(2)
-    iterations = args(3).toInt
-
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())

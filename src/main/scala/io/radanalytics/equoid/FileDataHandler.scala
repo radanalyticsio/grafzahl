@@ -81,34 +81,32 @@ object FileDataHandler {
   }
 
   def createStreamingContext(): StreamingContext = {
-    val infinispanHost = getProp("jdgHost", "datagrid-hotrod")
-    val infinispanPort = getProp("jdgPort", "11333").toInt
+    val infinispanHost = getProp("jdgHost", "localhost")
+    val infinispanPort = getProp("jdgPort", "11222").toInt
     val k = getProp("cmsK", "3").toInt
     val epsilon = getProp("cmsEpsilon", "0.01").toDouble
     val confidence = getProp("cmsConfidence", "0.9").toDouble    
     var globalTopK = TopK.empty[String](k, epsilon, confidence)
+    var windowTopK = TopK.empty[String](k, epsilon, confidence)
     val conf = new SparkConf().setMaster(master).setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     
     val ssc = new StreamingContext(conf, Seconds(batchIntervalSeconds))
     ssc.checkpoint(checkpointDir)
    
-    val receiveStream = ssc.textFileStream("/tmp/datafiles/").map(record => (record, 1))
-    val recordCounts = receiveStream.reduceByKey(_ + _)
-    recordCounts.saveAsTextFiles("/tmp/outputeq/file")
-    recordCounts.print()
-  /* 
-    val saleStream = receiveStream.foreachRDD(rdd => {
+    val receiveStream = ssc.textFileStream("/tmp/datafiles/")
+     .transform( rdd => { 
+        rdd.mapPartitions( rows => { 
+          Iterator(rows.foldLeft(TopK.empty[String](k, epsilon, confidence))(_ + _ )) 
+      })
+    })
+    .reduceByWindow(_ ++ _, Seconds(10), Seconds(10)) 
+    .foreachRDD(rdd => {
       val intervalCounter = FileIntervalAccumulator.getInstance(rdd.sparkContext)
       val interval = intervalCounter.sum
-
-      rdd.foreachPartition(partitionOfRecords => {
-        val partitionTopK = partitionOfRecords.foldLeft(TopK.empty[String](k, epsilon, confidence))(_+_)
-        globalTopK = globalTopK ++ partitionTopK
-      })
-      storeTopK(interval, globalTopK.topk, infinispanHost, infinispanPort)
+      storeTopK(interval, rdd.first.topk, infinispanHost, infinispanPort)
       intervalCounter.add(1)
-    })*/
+    })
     ssc
   }
 }
