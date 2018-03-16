@@ -34,7 +34,7 @@ A facility for testing/trying out the DataHandler capabilities without an OpenSh
 
 2. Recommended: clean out checkpoint area and data files, see for example `src/test/bash/cleanlocal.sh`
 
-3. Start an Infinispan server on `localhost` via Infinispan's provided `bin/standalone.sh` (easiest for testing if an extant server is not available)
+3. Start an Infinispan server on `localhost` via Infinispan's provided `bin/standalone.sh` (easiest for testing functionality in the case where an extant server is not available)
  
 4. Start `FileDataHandler` (assumes `$SPARK_HOME` is set properly) see for example `src/test/bash/startlocal.sh` 
 `$SPARK_HOME/bin/spark-submit --class io.radanalytics.equoid.FileDataHandler --master local[4] target/scala-2.11/equoid-data-handler-assembly-0.1.0-SNAPSHOT.jar`
