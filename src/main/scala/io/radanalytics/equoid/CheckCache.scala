@@ -24,8 +24,8 @@ object CheckCache {
               }  
 
   def main(args: Array[String]): Unit = {
-    val infinispanHost = getProp("jdgHost", "localhost")
-    val infinispanPort = getProp("jdgPort", "11222").toInt
+    val infinispanHost = getProp("jdgHost", "datagrid-hotrod")
+    val infinispanPort = getProp("jdgPort", "11333").toInt
     val iterations = getProp("ccIter", "15").toInt
     
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
