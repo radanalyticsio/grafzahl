@@ -86,8 +86,6 @@ object FileDataHandler {
     val k = getProp("cmsK", "3").toInt
     val epsilon = getProp("cmsEpsilon", "0.01").toDouble
     val confidence = getProp("cmsConfidence", "0.9").toDouble    
-    var globalTopK = TopK.empty[String](k, epsilon, confidence)
-    var windowTopK = TopK.empty[String](k, epsilon, confidence)
     val conf = new SparkConf().setMaster(master).setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     

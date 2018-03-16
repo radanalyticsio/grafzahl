@@ -84,30 +84,6 @@ object DataHandler {
     }
   }
 
-/*
-  def storeSale(itemID: String, infinispanHost: String, infinispanPort: Int): String = {
-    val builder: ConfigurationBuilder = new ConfigurationBuilder()
-    builder.addServer().host(infinispanHost).port(infinispanPort)
-    
-    val cacheManager = new RemoteCacheManager(builder.build())
-
-    val cache = cacheManager.getCache[String, String]()
-
-    var ret:String = cache.get(itemID)
-   
-    if (ret!=null) {
-      ret = (ret.toInt + 1).toString
-    }
-    else {
-      ret = "1"
-    }
-    
-    cache.put(itemID, ret)
-    cacheManager.stop()
-    itemID
-  }
- */
-
   def storeTopK(interval: Long, topk: Vector[(String, Int)], infinispanHost: String, infinispanPort: Int): Unit = {
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
@@ -131,7 +107,6 @@ object DataHandler {
     val k = getProp("cmsK", "3").toInt
     val epsilon = getProp("cmsEpsilon", "0.01").toDouble
     val confidence = getProp("cmsConfidence", "0.9").toDouble    
-    var globalTopK = TopK.empty[String](k, epsilon, confidence)
     val conf = new SparkConf().setMaster(master).setAppName(appName)
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     
@@ -139,17 +114,17 @@ object DataHandler {
     ssc.checkpoint(checkpointDir)
     
     val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, messageConverter _, StorageLevel.MEMORY_ONLY)
-   
-    val saleStream = receiveStream.foreachRDD(rdd => {
-      val intervalCounter = IntervalAccumulator.getInstance(rdd.sparkContext)
-      val interval = intervalCounter.sum
-
-      rdd.foreachPartition(partitionOfRecords => {
-        val partitionTopK = partitionOfRecords.foldLeft(TopK.empty[String](k, epsilon, confidence))(_+_)
-        globalTopK = globalTopK ++ partitionTopK
+      .transform( rdd => {
+        rdd.mapPartitions( rows => {
+          Iterator(rows.foldLeft(TopK.empty[String](k, epsilon, confidence))(_ + _))
+        })
       })
-      storeTopK(interval, globalTopK.topk, infinispanHost, infinispanPort)
-      intervalCounter.add(1)
+      .reduceByWindow(_ ++ _, Seconds(10), Seconds(10))
+      .foreachRDD(rdd => {
+        val intervalCounter = IntervalAccumulator.getInstance(rdd.sparkContext)
+        val interval = intervalCounter.sum
+        storeTopK(interval, rdd.first.topk, infinispanHost, infinispanPort)
+        intervalCounter.add(1)
     })
     ssc
   }
