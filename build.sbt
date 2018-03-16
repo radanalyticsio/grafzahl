@@ -2,7 +2,7 @@ name := "equoid-data-handler"
 
 organization := "io.radanalytics"
 
-version := "0.1.0-SNAPSNOT"
+version := "0.1.0-SNAPSHOT"
 
 scalaVersion := "2.11.8"
 
