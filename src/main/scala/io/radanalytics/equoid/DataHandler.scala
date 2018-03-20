@@ -33,6 +33,7 @@ import org.infinispan.client.hotrod.impl.ConfigurationProperties
 
 import scala.collection.immutable
 
+/*
 object IntervalAccumulator {
 
   @volatile private var instance: LongAccumulator = null
@@ -48,13 +49,10 @@ object IntervalAccumulator {
     instance
   }
 }
+*/
 
 object DataHandler {
 
-  private var master: String = "local[2]"
-  private val appName: String = getClass().getSimpleName()
-
-  private val batchIntervalSeconds: Int = 5
   private val checkpointDir: String = "/tmp/equoid-data-handler"
 
   def getProp(camelCaseName: String, defaultValue: String): String = {
@@ -64,12 +62,10 @@ object DataHandler {
   
   def main(args: Array[String]): Unit = {
 
-    master = "spark://sparky:7077"
-
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContext)
     
     ssc.start()
-    ssc.awaitTerminationOrTimeout(batchIntervalSeconds * 1000 * 1000)
+    ssc.awaitTerminationOrTimeout(5 * 1000 * 1000)
     ssc.stop()
   }
 
@@ -84,7 +80,7 @@ object DataHandler {
     }
   }
 
-  def storeTopK(interval: Long, topk: Vector[(String, Int)], infinispanHost: String, infinispanPort: Int): Unit = {
+  def storeTopK(interval: String, topk: Vector[(String, Int)], infinispanHost: String, infinispanPort: Int): Unit = {
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
     val cacheManager = new RemoteCacheManager(builder.build())
@@ -92,7 +88,7 @@ object DataHandler {
     var topkstr: String = ""
 
     for ((key,v) <- topk) topkstr = topkstr + key + ":" + v.toString + ";" 
-    cache.put(interval.toString, topkstr)
+    cache.put(interval + " Seconds", topkstr)
     cacheManager.stop()
   }
 
@@ -106,11 +102,14 @@ object DataHandler {
     val infinispanPort = getProp("jdgPort", "11333").toInt
     val k = getProp("cmsK", "3").toInt
     val epsilon = getProp("cmsEpsilon", "0.01").toDouble
-    val confidence = getProp("cmsConfidence", "0.9").toDouble    
-    val conf = new SparkConf().setMaster(master).setAppName(appName)
+    val confidence = getProp("cmsConfidence", "0.9").toDouble   
+    val windowSeconds = getProp("windowSeconds", "30").toInt
+    val slideSeconds = getProp("slideSeconds", "30").toInt
+    val sparkMaster = getProp("sparkMaster", "spark://sparky:7077")
+    val conf = new SparkConf().setMaster(sparkMaster).setAppName(getClass().getSimpleName())
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     
-    val ssc = new StreamingContext(conf, Seconds(batchIntervalSeconds))
+    val ssc = new StreamingContext(conf, Seconds(windowSeconds))
     ssc.checkpoint(checkpointDir)
     
     val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, messageConverter _, StorageLevel.MEMORY_ONLY)
@@ -119,12 +118,12 @@ object DataHandler {
           Iterator(rows.foldLeft(TopK.empty[String](k, epsilon, confidence))(_ + _))
         })
       })
-      .reduceByWindow(_ ++ _, Seconds(10), Seconds(10))
+      .reduceByWindow(_ ++ _, Seconds(windowSeconds), Seconds(slideSeconds))
       .foreachRDD(rdd => {
-        val intervalCounter = IntervalAccumulator.getInstance(rdd.sparkContext)
-        val interval = intervalCounter.sum
-        storeTopK(interval, rdd.first.topk, infinispanHost, infinispanPort)
-        intervalCounter.add(1)
+//        val intervalCounter = IntervalAccumulator.getInstance(rdd.sparkContext)
+//        val interval = intervalCounter.sum
+        storeTopK(windowSeconds.toString, rdd.first.topk, infinispanHost, infinispanPort)
+//        intervalCounter.add(1)
     })
     ssc
   }
