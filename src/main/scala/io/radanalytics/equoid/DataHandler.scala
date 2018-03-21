@@ -33,24 +33,6 @@ import org.infinispan.client.hotrod.impl.ConfigurationProperties
 
 import scala.collection.immutable
 
-/*
-object IntervalAccumulator {
-
-  @volatile private var instance: LongAccumulator = null
-
-  def getInstance(sc: SparkContext): LongAccumulator = {
-    if (instance == null) {
-      synchronized { 
-        if (instance == null) {
-          instance = sc.longAccumulator("IntervalCounter")
-        }
-      }
-    }
-    instance
-  }
-}
-*/
-
 object DataHandler {
 
   private val checkpointDir: String = "/tmp/equoid-data-handler"
@@ -120,10 +102,7 @@ object DataHandler {
       })
       .reduceByWindow(_ ++ _, Seconds(windowSeconds), Seconds(slideSeconds))
       .foreachRDD(rdd => {
-//        val intervalCounter = IntervalAccumulator.getInstance(rdd.sparkContext)
-//        val interval = intervalCounter.sum
         storeTopK(windowSeconds.toString, rdd.first.topk, infinispanHost, infinispanPort)
-//        intervalCounter.add(1)
     })
     ssc
   }
