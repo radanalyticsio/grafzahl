@@ -81,7 +81,7 @@ object DataHandler {
     val password = Option(getProp("amqpPassword", "daikon"))
     val address = getProp("queueName", "salesq")
     val infinispanHost = getProp("jdgHost", "datagrid-hotrod")
-    val infinispanPort = getProp("jdgPort", "11333").toInt
+    val infinispanPort = getProp("jdgPort", "11222").toInt
     val k = getProp("cmsK", "3").toInt
     val epsilon = getProp("cmsEpsilon", "0.01").toDouble
     val confidence = getProp("cmsConfidence", "0.9").toDouble   

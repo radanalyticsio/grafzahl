@@ -14,10 +14,9 @@ licenses += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0"))
 
 def commonSettings = Seq(
   libraryDependencies ++= Seq(
-    "org.infinispan" % "infinispan-core" % "9.2.0.Final",
-    "org.infinispan" % "infinispan-client-hotrod" % "9.2.0.Final",
-    "org.infinispan" %% "infinispan-spark" % "0.6",    
-    ("io.radanalytics" %% "spark-streaming-amqp" % "0.3.1").exclude("com.fasterxml.jackson.core", "jackson-databind"),
+    "org.infinispan" % "infinispan-core" % "9.1.6.Final",
+    "org.infinispan" % "infinispan-client-hotrod" % "9.1.6.Final",
+    ("io.radanalytics" %% "spark-streaming-amqp" % "0.3.1").exclude("com.fasterxml.jackson.core", "jackson-databind").exclude("io.netty", "netty"),
     "org.apache.spark" %% "spark-core" % sparkVersion % Provided,
     "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
     "org.apache.spark" %% "spark-streaming" % sparkVersion % Provided,
@@ -36,7 +35,7 @@ assemblyMergeStrategy in assembly := {
   case "META-INF/DEPENDENCIES.txt" => MergeStrategy.discard
   case "META-INF/io.netty.versions.properties" => MergeStrategy.discard
   case "features.xml" => MergeStrategy.discard
-  case PathList("io", "netty", _*) => MergeStrategy.first
+ // case PathList("io", "netty", _*) => MergeStrategy.discard
 
   case x =>
     val oldStrategy = (assemblyMergeStrategy in assembly).value
