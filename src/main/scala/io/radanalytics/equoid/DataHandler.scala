@@ -1,46 +1,17 @@
 package io.radanalytics.equoid
 
-import java.lang.Long
-
-import io.radanalytics.streaming.amqp.AMQPJsonFunction
-import io.vertx.core.{AsyncResult, Handler, Vertx}
-import io.vertx.proton._
-import org.apache.log4j.{Level, LogManager, PropertyConfigurator, Logger}
-
-import org.apache.qpid.proton.amqp.messaging.{AmqpValue, Data}
+import org.apache.qpid.proton.amqp.messaging.AmqpValue
 import org.apache.qpid.proton.message.Message
 import org.apache.spark.SparkConf
-import org.apache.spark.SparkContext
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.rdd
 import org.apache.spark.streaming.amqp.AMQPUtils
-import org.apache.spark.streaming.{Duration, Seconds, StreamingContext}
-
-import org.apache.spark.util.sketch.CountMinSketch
-import io.radanalytics.equoid._
-import org.apache.spark.sql.SparkSession
-
-import org.apache.spark.util.sketch
-import org.apache.spark.util.LongAccumulator
-import scala.util.Random
-import scala.util.Properties
-
-import org.infinispan._
-import org.infinispan.client.hotrod.RemoteCache
+import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.infinispan.client.hotrod.RemoteCacheManager
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder
-import org.infinispan.client.hotrod.impl.ConfigurationProperties
-
-import scala.collection.immutable
 
 object DataHandler {
 
   private val checkpointDir: String = "/tmp/equoid-data-handler"
-
-  def getProp(camelCaseName: String, defaultValue: String): String = {
-    val snakeCaseName = camelCaseName.replaceAll("(.)(\\p{Upper})", "$1_$2").toUpperCase()
-    Properties.envOrElse(snakeCaseName, Properties.scalaPropOrElse(snakeCaseName, defaultValue))
-  }  
   
   def main(args: Array[String]): Unit = {
 
@@ -75,19 +46,19 @@ object DataHandler {
   }
 
   def createStreamingContext(): StreamingContext = {
-    val amqpHost = getProp("amqpHost", "broker-amq-amqp")
-    val amqpPort = getProp("amqpPort", "5672").toInt
-    val username = Option(getProp("amqpUsername", "daikon"))
-    val password = Option(getProp("amqpPassword", "daikon"))
-    val address = getProp("queueName", "salesq")
-    val infinispanHost = getProp("jdgHost", "datagrid-hotrod")
-    val infinispanPort = getProp("jdgPort", "11222").toInt
-    val k = getProp("cmsK", "3").toInt
-    val epsilon = getProp("cmsEpsilon", "0.01").toDouble
-    val confidence = getProp("cmsConfidence", "0.9").toDouble   
-    val windowSeconds = getProp("windowSeconds", "30").toInt
-    val slideSeconds = getProp("slideSeconds", "30").toInt
-    val sparkMaster = getProp("sparkMaster", "spark://sparky:7077")
+    val amqpHost = getProp("AMQP_HOST", "broker-amq-amqp")
+    val amqpPort = getProp("AMQP_PORT", "5672").toInt
+    val username = Option(getProp("AMQP_USERNAME", "daikon"))
+    val password = Option(getProp("AMQP_PASSWORD", "daikon"))
+    val address = getProp("QUEUE_NAME", "salesq")
+    val infinispanHost = getProp("JDG_HOST", "datagrid-hotrod")
+    val infinispanPort = getProp("JDG_PORT", "11222").toInt
+    val k = getProp("CMS_K", "3").toInt
+    val epsilon = getProp("CMS_EPSILON", "0.01").toDouble
+    val confidence = getProp("CMS_CONFIDENCE", "0.9").toDouble
+    val windowSeconds = getProp("WINDOW_SECONDS", "30").toInt
+    val slideSeconds = getProp("SLIDE_SECONDS", "30").toInt
+    val sparkMaster = getProp("SPARK_MASTER", "spark://sparky:7077")
     val conf = new SparkConf().setMaster(sparkMaster).setAppName(getClass().getSimpleName())
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     

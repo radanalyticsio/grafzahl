@@ -6,8 +6,6 @@ package io.radanalytics.equoid
 
 import org.apache.spark.util.sketch.CountMinSketch
 
-import scala.collection.immutable
-
 class TopK[V] ( 
   val k: Int,
   val cms: CountMinSketch,

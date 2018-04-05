@@ -1,32 +1,14 @@
 package io.radanalytics.equoid
 
-import java.lang.Long
-
-import io.radanalytics.equoid._
-
-import scala.util.Random
-
-import org.infinispan._
-import org.infinispan.client.hotrod.RemoteCache
 import org.infinispan.client.hotrod.RemoteCacheManager
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder
-import org.infinispan.client.hotrod.configuration.Configuration
-import org.infinispan.client.hotrod.impl.ConfigurationProperties
-
-import scala.collection.immutable
-import scala.util.Properties
 
 object CheckCache {
 
-  def getProp(camelCaseName: String, defaultValue: String): String = {
-        val snakeCaseName = camelCaseName.replaceAll("(.)(\\p{Upper})", "$1_$2").toUpperCase()
-            Properties.envOrElse(snakeCaseName, Properties.scalaPropOrElse(snakeCaseName, defaultValue))
-              }  
-
   def main(args: Array[String]): Unit = {
-    val infinispanHost = getProp("jdgHost", "datagrid-hotrod")
-    val infinispanPort = getProp("jdgPort", "11222").toInt
-    val iterations = getProp("ccIter", "15").toInt
+    val infinispanHost = getProp("JDG_HOST", "datagrid-hotrod")
+    val infinispanPort = getProp("JDG_PORT", "11222").toInt
+    val iterations = getProp("CC_ITER", "15").toInt
     
     val builder: ConfigurationBuilder = new ConfigurationBuilder()
     builder.addServer().host(infinispanHost).port(infinispanPort)
