@@ -16,6 +16,7 @@ object DataHandler {
   def main(args: Array[String]): Unit = {
 
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContext)
+    ssc.sparkContext.setLogLevel("ERROR")
     
     ssc.start()
     ssc.awaitTerminationOrTimeout(5 * 1000 * 1000)
@@ -40,7 +41,8 @@ object DataHandler {
     val cache = cacheManager.getCache[String, String]()
     var topkstr: String = ""
 
-    for ((key,v) <- topk) topkstr = topkstr + key + ":" + v.toString + ";" 
+    for ((key,v) <- topk) topkstr = topkstr + key + ":" + v.toString + ";"
+    println(s"\nStoring top-k:\n$topk\n..for the last $interval into JDG.")
     cache.put(interval + " Seconds", topkstr)
     cacheManager.stop()
   }
@@ -58,11 +60,12 @@ object DataHandler {
     val confidence = getProp("CMS_CONFIDENCE", "0.9").toDouble
     val windowSeconds = getProp("WINDOW_SECONDS", "30").toInt
     val slideSeconds = getProp("SLIDE_SECONDS", "30").toInt
+    val batchSeconds = getProp("BATCH_SECONDS", "30").toInt
     val sparkMaster = getProp("SPARK_MASTER", "spark://sparky:7077")
     val conf = new SparkConf().setMaster(sparkMaster).setAppName(getClass().getSimpleName())
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
     
-    val ssc = new StreamingContext(conf, Seconds(windowSeconds))
+    val ssc = new StreamingContext(conf, Seconds(batchSeconds))
     ssc.checkpoint(checkpointDir)
     
     val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, messageConverter _, StorageLevel.MEMORY_ONLY)
