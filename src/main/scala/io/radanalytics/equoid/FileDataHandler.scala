@@ -1,12 +1,10 @@
 package io.radanalytics.equoid
 
-import java.lang.Long
-
 import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.util.LongAccumulator
-import org.infinispan.client.hotrod.RemoteCacheManager
-import org.infinispan.client.hotrod.configuration.ConfigurationBuilder
 
 import scala.util.Properties
 
@@ -31,7 +29,6 @@ object FileDataHandler {
   private var master: String = "local[2]"
   private val appName: String = getClass().getSimpleName()
 
-  private val batchIntervalSeconds: Int = 5
   private val checkpointDir: String = "/tmp/equoid-data-handler"
 
   def getProp(camelCaseName: String, defaultValue: String): String = {
@@ -44,49 +41,45 @@ object FileDataHandler {
     master = "local[4]"
 
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContext)
+    ssc.sparkContext.setLogLevel("ERROR")
     
     ssc.start()
-    ssc.awaitTerminationOrTimeout(batchIntervalSeconds * 1000 * 1000)
+    ssc.awaitTerminationOrTimeout(5 * 1000 * 1000)
     ssc.stop()
-  }
-
-  def storeTopK(interval: Long, topk: Vector[(String, Int)], infinispanHost: String, infinispanPort: Int): Unit = {
-    val builder: ConfigurationBuilder = new ConfigurationBuilder()
-    builder.addServer().host(infinispanHost).port(infinispanPort)
-    val cacheManager = new RemoteCacheManager(builder.build())
-    val cache = cacheManager.getCache[String, String]()
-    var topkstr: String = ""
-
-    for ((key,v) <- topk) topkstr = topkstr + key + ":" + v.toString + ";" 
-    cache.put(interval.toString, topkstr)
-    cacheManager.stop()
   }
 
   def createStreamingContext(): StreamingContext = {
     val infinispanHost = getProp("JDG_HOST", "localhost")
     val infinispanPort = getProp("JDG_PORT", "11222").toInt
-    val k = getProp("CMS_K", "3").toInt
-    val epsilon = getProp("CMS_EPSILON", "0.01").toDouble
-    val confidence = getProp("CMS_CONFIDENCE", "0.9").toDouble
+    val k = getProp("CMS_K", "5").toInt
+    // the values for epsilon and confidence are as follows to have results closer to exact counting rather then
+    // loosing some information due to the sketch nature
+    val epsilon = getProp("CMS_EPSILON", "0.001").toDouble
+    val confidence = getProp("CMS_CONFIDENCE", "0.999").toDouble
+
     val conf = new SparkConf().setMaster(master).setAppName(appName)
+    val windowSeconds = getProp("WINDOW_SECONDS", "50").toInt
+    val slideSeconds = getProp("SLIDE_SECONDS", "4").toInt
+    val batchSeconds = getProp("BATCH_SECONDS", "2").toInt
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
-    
-    val ssc = new StreamingContext(conf, Seconds(batchIntervalSeconds))
+
+    val ssc = new StreamingContext(conf, Seconds(batchSeconds))
     ssc.checkpoint(checkpointDir)
-   
-    val receiveStream = ssc.textFileStream("/tmp/datafiles/")
-     .transform( rdd => { 
-        rdd.mapPartitions( rows => { 
-          Iterator(rows.foldLeft(TopK.empty[String](k, epsilon, confidence))(_ + _ )) 
+
+    val receiveStream: DStream[String] = ssc.textFileStream("/tmp/datafiles/")
+    receiveStream.transform(rdd => {
+      val result: RDD[TopK[String]] = rdd.mapPartitions(partition => {
+        Iterator(partition.foldLeft(TopK.empty[String](k, epsilon, confidence))(_ + _))
       })
-    })
-    .reduceByWindow(_ ++ _, Seconds(10), Seconds(10)) 
-    .foreachRDD(rdd => {
-      val intervalCounter = FileIntervalAccumulator.getInstance(rdd.sparkContext)
-      val interval = intervalCounter.sum
-      storeTopK(interval, rdd.first.topk, infinispanHost, infinispanPort)
-      intervalCounter.add(1)
-    })
+      result
+    }).reduceByWindow((t1, t2) => {
+      println(" left operand: " + t1)
+      println("right operand: " + t2)
+      val result: TopK[String] = t1 ++ t2
+      println("       result: " + result)
+      result
+    }, Seconds(windowSeconds), Seconds(slideSeconds))
+      .print()
     ssc
   }
 }
