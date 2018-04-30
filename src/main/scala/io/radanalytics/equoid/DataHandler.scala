@@ -60,7 +60,7 @@ object DataHandler {
     val confidence = getProp("CMS_CONFIDENCE", "0.9").toDouble
     val windowSeconds = getProp("WINDOW_SECONDS", "30").toInt
     val slideSeconds = getProp("SLIDE_SECONDS", "30").toInt
-    val batchSeconds = getProp("BATCH_SECONDS", "30").toInt
+    val batchSeconds = getProp("SLIDE_SECONDS", "30").toInt
     //val sparkMaster = getProp("SPARK_MASTER", "spark://sparky:7077")
     val conf = new SparkConf() //.setMaster(sparkMaster).setAppName(getClass().getSimpleName())
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
