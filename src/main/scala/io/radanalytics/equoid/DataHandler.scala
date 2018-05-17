@@ -42,7 +42,7 @@ object DataHandler {
     var topkstr: String = ""
 
     for ((key,v) <- topk) topkstr = topkstr + key + ":" + v.toString + ";"
-    println(s"\nStoring top-k:\n$topk\n..for the last $interval into JDG.")
+    println(s"\nStoring top-k:\n$topk\n..for the last $interval seconds into JDG.")
     cache.put(interval + " Seconds", topkstr)
     cacheManager.stop()
   }
@@ -61,13 +61,17 @@ object DataHandler {
     val windowSeconds = getProp("WINDOW_SECONDS", "30").toInt
     val slideSeconds = getProp("SLIDE_SECONDS", "30").toInt
     val batchSeconds = getProp("SLIDE_SECONDS", "30").toInt
+
+    // store something in the JDG for this interval so that we can give something quickly to the user
+    storeTopK(windowSeconds.toString, Vector(("nothing", 0)), infinispanHost, infinispanPort)
+
     //val sparkMaster = getProp("SPARK_MASTER", "spark://sparky:7077")
     val conf = new SparkConf() //.setMaster(sparkMaster).setAppName(getClass().getSimpleName())
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
-    
+
     val ssc = new StreamingContext(conf, Seconds(batchSeconds))
     ssc.checkpoint(checkpointDir)
-    
+
     val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, messageConverter _, StorageLevel.MEMORY_ONLY)
       .transform( rdd => {
         rdd.mapPartitions( rows => {
