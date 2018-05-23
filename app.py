@@ -25,10 +25,10 @@ spark = SparkSession.builder.appName("grafzhal").getOrCreate()
 
 
 def top(request):
-   results = spark.sql("SELECT * FROM results ORDER BY count DESC LIMIT {}" \
-                       .format(int(request.args.get('n') or 10))) \
-                  .collect()
-   return (map(lambda x: x.value, results), map(lambda x: x['count'], results))
+    results = spark.sql("SELECT * FROM results ORDER BY count DESC LIMIT {}"
+                        .format(int(request.args.get('n') or 10))) \
+                   .collect()
+    return (map(lambda x: x.value, results), map(lambda x: x['count'], results))
 
 @app.route("/")
 def ahahah():
