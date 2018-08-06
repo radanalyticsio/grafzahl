@@ -23,12 +23,14 @@ object DataHandler {
     ssc.stop()
   }
 
+  /* TODO: Modify this to parse incoming message */
   def messageConverter(message: Message): Option[String] = {
 
     message.getBody match {
       case body: AmqpValue => {
         val itemID: String = body.getValue.asInstanceOf[String]
-        Some(itemID)
+        val fieldVal = itemID.split(",")
+        Some(fieldVal(0))
       }
       case x => { println(s"unexpected type ${x.getClass.getName}"); None }
     }
@@ -61,6 +63,7 @@ object DataHandler {
     val windowSeconds = getProp("WINDOW_SECONDS", "30").toInt
     val slideSeconds = getProp("SLIDE_SECONDS", "30").toInt
     val batchSeconds = getProp("SLIDE_SECONDS", "30").toInt
+    val fieldOfInterest = getProp("FIELD_INDEX", "0").toInt;
 
     // store something in the JDG for this interval so that we can give something quickly to the user
     storeTopK(windowSeconds.toString, Vector(("nothing", 0)), infinispanHost, infinispanPort)
