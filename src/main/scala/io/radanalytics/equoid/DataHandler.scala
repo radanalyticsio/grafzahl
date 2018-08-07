@@ -32,9 +32,9 @@ object DataHandler {
         val stockVal: String = itemID.split(",")(0)
         val countryVal: String = itemID.split(",")(1)
         opMode match {
-          case "Stock" => Some(stockVal)
-          case "Country" => Some(countryVal)
-          case "StockByCountry" => Some(itemID)
+          case "stock" => Some(stockVal)
+          case "country" => Some(countryVal)
+          case "stockbycountry" => Some(itemID)
           case x => { println(s"unexpected opMode"); None }
         }
       }
