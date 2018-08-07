@@ -12,7 +12,8 @@ import org.infinispan.client.hotrod.configuration.ConfigurationBuilder
 object DataHandler {
 
   private val checkpointDir: String = "/tmp/equoid-data-handler"
-  
+  var opMode: String = ""
+
   def main(args: Array[String]): Unit = {
 
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContext)
@@ -23,14 +24,19 @@ object DataHandler {
     ssc.stop()
   }
 
-  /* TODO: Modify this to parse incoming message */
   def messageConverter(message: Message): Option[String] = {
 
     message.getBody match {
       case body: AmqpValue => {
         val itemID: String = body.getValue.asInstanceOf[String]
-        val fieldVal = itemID.split(",")
-        Some(fieldVal(0))
+        val stockVal: String = itemID.split(",")(0)
+        val countryVal: String = itemID.split(",")(1)
+        opMode match {
+          case "Stock" => Some(stockVal)
+          case "Country" => Some(countryVal)
+          case "StockByCountry" => Some(itemID)
+          case x => { println(s"unexpected opMode"); None }
+        }
       }
       case x => { println(s"unexpected type ${x.getClass.getName}"); None }
     }
@@ -63,13 +69,12 @@ object DataHandler {
     val windowSeconds = getProp("WINDOW_SECONDS", "30").toInt
     val slideSeconds = getProp("SLIDE_SECONDS", "30").toInt
     val batchSeconds = getProp("SLIDE_SECONDS", "30").toInt
-    val fieldOfInterest = getProp("FIELD_INDEX", "0").toInt;
+    opMode = getProp("OP_MODE", "Stock");
 
     // store something in the JDG for this interval so that we can give something quickly to the user
     storeTopK(windowSeconds.toString, Vector(("nothing", 0)), infinispanHost, infinispanPort)
 
-    //val sparkMaster = getProp("SPARK_MASTER", "spark://sparky:7077")
-    val conf = new SparkConf() //.setMaster(sparkMaster).setAppName(getClass().getSimpleName())
+    val conf = new SparkConf()
     conf.set("spark.streaming.receiver.writeAheadLog.enable", "true")
 
     val ssc = new StreamingContext(conf, Seconds(batchSeconds))
