@@ -31,6 +31,7 @@ object DataHandler {
         val itemID: String = body.getValue.asInstanceOf[String]
         val stockVal: String = itemID.split(",")(0)
         val countryVal: String = itemID.split(",")(1)
+        println(s"opMode: $opMode itemID: $itemID stockVal: $stockVal countryVal: $countryVal")
         opMode match {
           case "stock" => Some(stockVal)
           case "country" => Some(countryVal)
