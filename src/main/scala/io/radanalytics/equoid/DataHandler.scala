@@ -15,7 +15,7 @@ object DataHandler {
   var opMode: String = ""
 
   def main(args: Array[String]): Unit = {
-
+    opMode = getProp("OP_MODE", "stock");
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContext)
     ssc.sparkContext.setLogLevel("ERROR")
     
@@ -69,7 +69,6 @@ object DataHandler {
     val windowSeconds = getProp("WINDOW_SECONDS", "30").toInt
     val slideSeconds = getProp("SLIDE_SECONDS", "30").toInt
     val batchSeconds = getProp("SLIDE_SECONDS", "30").toInt
-    opMode = getProp("OP_MODE", "Stock");
 
     // store something in the JDG for this interval so that we can give something quickly to the user
     storeTopK(windowSeconds.toString, Vector(("nothing", 0)), infinispanHost, infinispanPort)
