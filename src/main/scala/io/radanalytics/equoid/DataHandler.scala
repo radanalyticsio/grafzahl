@@ -12,10 +12,8 @@ import org.infinispan.client.hotrod.configuration.ConfigurationBuilder
 object DataHandler {
 
   private val checkpointDir: String = "/tmp/equoid-data-handler"
-  var opMode: String = ""
 
   def main(args: Array[String]): Unit = {
-    opMode = getProp("OP_MODE", "stock");
     val ssc = StreamingContext.getOrCreate(checkpointDir, createStreamingContext)
     ssc.sparkContext.setLogLevel("ERROR")
     
@@ -25,6 +23,7 @@ object DataHandler {
   }
 
   def messageConverter(message: Message): Option[String] = {
+    val opMode = getProp("OP_MODE", "stock");
 
     message.getBody match {
       case body: AmqpValue => {
