@@ -22,8 +22,7 @@ object DataHandler {
     ssc.stop()
   }
 
-  def messageConverter(message: Message): Option[String] = {
-    val opMode = getProp("OP_MODE", "stock");
+  def messageConverter(message: Message, opMode: String): Option[String] = {
 
     message.getBody match {
       case body: AmqpValue => {
@@ -69,7 +68,7 @@ object DataHandler {
     val windowSeconds = getProp("WINDOW_SECONDS", "30").toInt
     val slideSeconds = getProp("SLIDE_SECONDS", "30").toInt
     val batchSeconds = getProp("SLIDE_SECONDS", "30").toInt
-
+    val opMode = getProp("OP_MODE", "stock")
     // store something in the JDG for this interval so that we can give something quickly to the user
     storeTopK(windowSeconds.toString, Vector(("nothing", 0)), infinispanHost, infinispanPort)
 
@@ -79,7 +78,7 @@ object DataHandler {
     val ssc = new StreamingContext(conf, Seconds(batchSeconds))
     ssc.checkpoint(checkpointDir)
 
-    val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, messageConverter _, StorageLevel.MEMORY_ONLY)
+    val receiveStream = AMQPUtils.createStream(ssc, amqpHost, amqpPort, username, password, address, messageConverter (_,opMode), StorageLevel.MEMORY_ONLY)
       .transform( rdd => {
         rdd.mapPartitions( rows => {
           Iterator(rows.foldLeft(TopK.empty[String](k, epsilon, confidence))(_ + _))
