@@ -27,13 +27,11 @@ object DataHandler {
     message.getBody match {
       case body: AmqpValue => {
         val itemID: String = body.getValue.asInstanceOf[String]
-        val stockVal: String = itemID.split(",")(0)
-        val countryVal: String = itemID.split(",")(1)
-        println(s"opMode: $opMode itemID: $itemID stockVal: $stockVal countryVal: $countryVal")
+        val primaryVal: String = itemID.split(",")(0)
+//        println(s"opMode: $opMode itemID: $itemID stockVal: $stockVal countryVal: $countryVal")
         opMode match {
-          case "stock" => Some(stockVal)
-          case "country" => Some(countryVal)
-          case "stockbycountry" => Some(itemID)
+          case "single" => Some(primaryVal)
+          case "dual" => Some(itemID)
           case x => { println(s"unexpected opMode"); None }
         }
       }
@@ -68,7 +66,7 @@ object DataHandler {
     val windowSeconds = getProp("WINDOW_SECONDS", "30").toInt
     val slideSeconds = getProp("SLIDE_SECONDS", "30").toInt
     val batchSeconds = getProp("SLIDE_SECONDS", "30").toInt
-    val opMode = getProp("OP_MODE", "stock")
+    val opMode = getProp("OP_MODE", "single")
     // store something in the JDG for this interval so that we can give something quickly to the user
     storeTopK(windowSeconds.toString, Vector(("nothing", 0)), infinispanHost, infinispanPort)
 
