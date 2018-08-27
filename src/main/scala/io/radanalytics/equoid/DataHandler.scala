@@ -28,8 +28,8 @@ object DataHandler {
       case body: AmqpValue => {
         val itemID: String = body.getValue.asInstanceOf[String]
         val primaryVal: String = itemID.split(",")(0)
-//        println(s"opMode: $opMode itemID: $itemID stockVal: $stockVal countryVal: $countryVal")
         opMode match {
+          case "linear" => Some(primaryVal)
           case "single" => Some(primaryVal)
           case "dual" => Some(itemID)
           case x => { println(s"unexpected opMode"); None }
@@ -57,7 +57,7 @@ object DataHandler {
     val amqpPort = getProp("AMQP_PORT", "5672").toInt
     val username = Option(getProp("AMQP_USERNAME", "daikon"))
     val password = Option(getProp("AMQP_PASSWORD", "daikon"))
-    val address = getProp("QUEUE_NAME", "salesq")
+    val address = getProp("QUEUE_NAME", "recordq")
     val infinispanHost = getProp("JDG_HOST", "datagrid-hotrod")
     val infinispanPort = getProp("JDG_PORT", "11222").toInt
     val k = getProp("CMS_K", "3").toInt
